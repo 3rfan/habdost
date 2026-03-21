@@ -1,120 +1,91 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import heroImg from './assets/hero.png'
-import './App.css'
+import { NavLink, Route, Routes } from "react-router-dom"
+import {
+  CalendarDays,
+  ListChecks,
+  Repeat,
+  Settings,
+} from "lucide-react"
 
 function App() {
-  const [count, setCount] = useState(0)
-
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
+    <div className="min-h-dvh bg-background text-foreground">
+      <header className="fixed inset-x-0 top-0 z-10 border-b bg-background/80 backdrop-blur">
+        <div className="mx-auto flex h-14 max-w-screen-sm items-center px-4">
+          <h1 className="text-lg font-semibold">HabDost</h1>
         </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.tsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
+      </header>
 
-      <div className="ticks"></div>
+      <main className="mx-auto min-h-dvh max-w-screen-sm px-4 pb-20 pt-16">
+        <Routes>
+          <Route
+            path="/"
+            element={<div className="text-sm text-muted-foreground">My Day view placeholder</div>}
+          />
+          <Route
+            path="/calendar"
+            element={<div className="text-sm text-muted-foreground">Calendar view placeholder</div>}
+          />
+          <Route
+            path="/habits"
+            element={<div className="text-sm text-muted-foreground">Habits view placeholder</div>}
+          />
+          <Route
+            path="/settings"
+            element={<div className="text-sm text-muted-foreground">Settings view placeholder</div>}
+          />
+        </Routes>
+      </main>
 
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
+      <nav className="fixed inset-x-0 bottom-0 z-10 border-t bg-background/90 backdrop-blur">
+        <div className="mx-auto grid h-16 max-w-screen-sm grid-cols-4 px-2">
+          <NavLink
+            to="/"
+            end
+            className={({ isActive }) =>
+              `flex flex-col items-center justify-center gap-1 text-xs ${
+                isActive ? "text-foreground" : "text-muted-foreground"
+              }`
+            }
+          >
+            <ListChecks className="h-5 w-5" />
+            My Day
+          </NavLink>
+          <NavLink
+            to="/calendar"
+            className={({ isActive }) =>
+              `flex flex-col items-center justify-center gap-1 text-xs ${
+                isActive ? "text-foreground" : "text-muted-foreground"
+              }`
+            }
+          >
+            <CalendarDays className="h-5 w-5" />
+            Calendar
+          </NavLink>
+          <NavLink
+            to="/habits"
+            className={({ isActive }) =>
+              `flex flex-col items-center justify-center gap-1 text-xs ${
+                isActive ? "text-foreground" : "text-muted-foreground"
+              }`
+            }
+          >
+            <Repeat className="h-5 w-5" />
+            Habits
+          </NavLink>
+          <NavLink
+            to="/settings"
+            className={({ isActive }) =>
+              `flex flex-col items-center justify-center gap-1 text-xs ${
+                isActive ? "text-foreground" : "text-muted-foreground"
+              }`
+            }
+          >
+            <Settings className="h-5 w-5" />
+            Settings
+          </NavLink>
         </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
-
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
+      </nav>
+    </div>
   )
 }
 

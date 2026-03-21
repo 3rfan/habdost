@@ -1,10 +1,7 @@
 import { NavLink, Route, Routes } from "react-router-dom"
-import {
-  CalendarDays,
-  ListChecks,
-  Repeat,
-  Settings,
-} from "lucide-react"
+import { CalendarDays, ListChecks, Repeat, Settings } from "lucide-react"
+
+import MyDay from "@/pages/MyDay"
 
 function App() {
   return (
@@ -19,7 +16,7 @@ function App() {
         <Routes>
           <Route
             path="/"
-            element={<div className="text-sm text-muted-foreground">My Day view placeholder</div>}
+            element={<MyDay />}
           />
           <Route
             path="/calendar"

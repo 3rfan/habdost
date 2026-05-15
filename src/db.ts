@@ -1,6 +1,6 @@
 import { openDB, type DBSchema, type IDBPDatabase } from "idb"
 
-import type { Habit, HabitLog, Id, Todo } from "@/types"
+import type { Habit, HabitLog, Id, StatisticsWidget, Todo } from "@/types"
 
 interface HabitTodoDB extends DBSchema {
   habits: {
@@ -18,28 +18,49 @@ interface HabitTodoDB extends DBSchema {
     value: HabitLog
     indexes: { "by-date": string; "by-habit": Id }
   }
+  statistics_widgets: {
+    key: Id
+    value: StatisticsWidget
+    indexes: { "by-habit": Id }
+  }
 }
 
 const DB_NAME = "HabitTodoDB"
-const DB_VERSION = 1
+const DB_VERSION = 2
 
 let dbPromise: Promise<IDBPDatabase<HabitTodoDB>> | null = null
 
 function getDb() {
   if (!dbPromise) {
     dbPromise = openDB<HabitTodoDB>(DB_NAME, DB_VERSION, {
-      upgrade(db) {
-        const habits = db.createObjectStore("habits", { keyPath: "id" })
-        habits.createIndex("by-tag", "tag")
+      upgrade(db, oldVersion) {
+        if (oldVersion < 1) {
+          const habits = db.createObjectStore("habits", { keyPath: "id" })
+          habits.createIndex("by-tag", "tag")
 
-        const todos = db.createObjectStore("todos", { keyPath: "id" })
-        todos.createIndex("by-date", "date")
-        todos.createIndex("by-linked-habit", "linkedHabitId")
+          const todos = db.createObjectStore("todos", { keyPath: "id" })
+          todos.createIndex("by-date", "date")
+          todos.createIndex("by-linked-habit", "linkedHabitId")
 
-        const logs = db.createObjectStore("logs", { keyPath: "id" })
-        logs.createIndex("by-date", "date")
-        logs.createIndex("by-habit", "habitId")
+          const logs = db.createObjectStore("logs", { keyPath: "id" })
+          logs.createIndex("by-date", "date")
+          logs.createIndex("by-habit", "habitId")
+        }
+        if (oldVersion < 2) {
+          const widgets = db.createObjectStore("statistics_widgets", { keyPath: "id" })
+          widgets.createIndex("by-habit", "habitId")
+        }
       },
+      blocked() {
+        console.warn("IndexedDB upgrade blocked! Please close other tabs of this app.")
+        alert("HabDost is updating. Please close all other tabs of this app and reload this page to complete the update.")
+      },
+      blocking() {
+        if (dbPromise) {
+          dbPromise.then(db => db.close())
+          dbPromise = null
+        }
+      }
     })
   }
 
@@ -176,14 +197,43 @@ export async function getHabitLogsByHabitAndDate(
 export async function clearDatabase() {
   try {
     const db = await getDb()
-    const tx = db.transaction(["habits", "todos", "logs"], "readwrite")
+    const tx = db.transaction(["habits", "todos", "logs", "statistics_widgets"], "readwrite")
     await Promise.all([
       tx.objectStore("habits").clear(),
       tx.objectStore("todos").clear(),
       tx.objectStore("logs").clear(),
+      tx.objectStore("statistics_widgets").clear(),
       tx.done,
     ])
   } catch (error) {
     console.error("Failed to clear database", error)
+  }
+}
+
+export async function getAllWidgets() {
+  try {
+    const db = await getDb()
+    return await db.getAll("statistics_widgets")
+  } catch (error) {
+    console.error("Failed to load statistics widgets", error)
+    return [] as StatisticsWidget[]
+  }
+}
+
+export async function addWidget(widget: StatisticsWidget) {
+  try {
+    const db = await getDb()
+    await db.put("statistics_widgets", widget)
+  } catch (error) {
+    console.error("Failed to save widget", error)
+  }
+}
+
+export async function deleteWidget(id: Id) {
+  try {
+    const db = await getDb()
+    await db.delete("statistics_widgets", id)
+  } catch (error) {
+    console.error("Failed to delete widget", error)
   }
 }

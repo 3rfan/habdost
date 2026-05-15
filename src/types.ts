@@ -5,6 +5,8 @@ export interface Habit {
   name: string
   tag: string
   scheduledDays: number[]
+  type?: "boolean" | "numeric"
+  unit?: string
   createdAt: string
   updatedAt: string
 }
@@ -24,5 +26,17 @@ export interface HabitLog {
   habitId: Id
   date: string
   completed: boolean
+  value?: number
+  createdAt: string
+}
+
+export type GraphType = "mini-heatmap" | "bar-chart"
+export type Timeframe = "1w" | "1m" | "3m" | "1y"
+
+export interface StatisticsWidget {
+  id: Id
+  habitId: Id
+  graphType: GraphType
+  timeframe: Timeframe
   createdAt: string
 }

@@ -25,6 +25,8 @@ export default function HabitManager() {
 
   const [name, setName] = useState("")
   const [tag, setTag] = useState("")
+  const [type, setType] = useState<"boolean" | "numeric">("boolean")
+  const [unit, setUnit] = useState("")
   const [scheduledDays, setScheduledDays] = useState<number[]>([])
 
   const toggleDay = (day: number) => {
@@ -43,10 +45,17 @@ export default function HabitManager() {
       return
     }
 
+    if (habits.some((h) => h.tag === trimmedTag)) {
+      alert("A habit with this tag already exists!")
+      return
+    }
+
     const habit: Habit = {
       id: crypto.randomUUID(),
       name: trimmedName,
       tag: trimmedTag,
+      type: type,
+      unit: type === "numeric" ? unit.trim() : undefined,
       scheduledDays: [...scheduledDays].sort(),
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
@@ -55,6 +64,8 @@ export default function HabitManager() {
     await addHabit(habit)
     setName("")
     setTag("")
+    setType("boolean")
+    setUnit("")
     setScheduledDays([])
   }
 
@@ -93,6 +104,44 @@ export default function HabitManager() {
                 placeholder="e.g. gym"
               />
             </div>
+
+            <div className="space-y-2">
+              <Label>Tracking Type</Label>
+              <div className="flex gap-4">
+                <label className="flex items-center gap-2 text-sm">
+                  <input
+                    type="radio"
+                    name="habit-type"
+                    value="boolean"
+                    checked={type === "boolean"}
+                    onChange={() => setType("boolean")}
+                  />
+                  Yes / No
+                </label>
+                <label className="flex items-center gap-2 text-sm">
+                  <input
+                    type="radio"
+                    name="habit-type"
+                    value="numeric"
+                    checked={type === "numeric"}
+                    onChange={() => setType("numeric")}
+                  />
+                  Numeric
+                </label>
+              </div>
+            </div>
+
+            {type === "numeric" && (
+              <div className="space-y-2">
+                <Label htmlFor="habit-unit">Unit (e.g., glasses, hours)</Label>
+                <Input
+                  id="habit-unit"
+                  value={unit}
+                  onChange={(e) => setUnit(e.target.value)}
+                  placeholder="e.g. pages"
+                />
+              </div>
+            )}
 
             <div className="space-y-2">
               <Label>Repeat on</Label>
@@ -159,6 +208,11 @@ export default function HabitManager() {
                         .map((d) => DAYS.find((day) => day.value === d)?.label)
                         .join(", ")}
                     </p>
+                    {habit.type === "numeric" && (
+                      <p className="text-xs font-medium text-emerald-600 dark:text-emerald-400">
+                        Tracks: {habit.unit || "amount"}
+                      </p>
+                    )}
                   </div>
                   <Button
                     variant="ghost"

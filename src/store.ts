@@ -1,17 +1,20 @@
 import { create } from "zustand"
 
-import type { Habit, HabitLog, Id, Todo } from "@/types"
+import type { Habit, HabitLog, Id, StatisticsWidget, Todo } from "@/types"
 import {
   addHabit,
   addHabitLog,
   addTodo,
+  addWidget,
   clearDatabase,
   deleteHabit,
   deleteHabitLog,
   deleteTodo,
+  deleteWidget,
   getAllHabitLogs,
   getAllHabits,
   getAllTodos,
+  getAllWidgets,
   updateTodo,
 } from "@/db"
 
@@ -19,6 +22,7 @@ interface AppState {
   habits: Habit[]
   todos: Todo[]
   logs: HabitLog[]
+  widgets: StatisticsWidget[]
   isLoading: boolean
   loadAll: () => Promise<void>
   addHabit: (habit: Habit) => Promise<void>
@@ -28,6 +32,8 @@ interface AppState {
   deleteTodo: (id: Id) => Promise<void>
   addHabitLog: (log: HabitLog) => Promise<void>
   deleteHabitLog: (id: Id) => Promise<void>
+  addWidget: (widget: StatisticsWidget) => Promise<void>
+  deleteWidget: (id: Id) => Promise<void>
   clearAll: () => Promise<void>
 }
 
@@ -35,15 +41,17 @@ export const useAppStore = create<AppState>((set, get) => ({
   habits: [],
   todos: [],
   logs: [],
+  widgets: [],
   isLoading: false,
   loadAll: async () => {
     set({ isLoading: true })
-    const [habits, todos, logs] = await Promise.all([
+    const [habits, todos, logs, widgets] = await Promise.all([
       getAllHabits(),
       getAllTodos(),
       getAllHabitLogs(),
+      getAllWidgets(),
     ])
-    set({ habits, todos, logs, isLoading: false })
+    set({ habits, todos, logs, widgets, isLoading: false })
   },
   addHabit: async (habit) => {
     await addHabit(habit)
@@ -73,8 +81,16 @@ export const useAppStore = create<AppState>((set, get) => ({
     await deleteHabitLog(id)
     set({ logs: get().logs.filter((log) => log.id !== id) })
   },
+  addWidget: async (widget) => {
+    await addWidget(widget)
+    set({ widgets: [...get().widgets, widget] })
+  },
+  deleteWidget: async (id) => {
+    await deleteWidget(id)
+    set({ widgets: get().widgets.filter((w) => w.id !== id) })
+  },
   clearAll: async () => {
     await clearDatabase()
-    set({ habits: [], todos: [], logs: [] })
+    set({ habits: [], todos: [], logs: [], widgets: [] })
   },
 }))

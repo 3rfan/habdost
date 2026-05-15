@@ -1,19 +1,30 @@
-import { useEffect, useMemo } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { format } from "date-fns"
 
 import { Checkbox } from "@/components/ui/checkbox"
 import TodoInput from "@/components/TodoInput"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Input } from "@/components/ui/input"
 import { useAppStore } from "@/store"
-import type { HabitLog } from "@/types"
+import type { HabitLog, Todo } from "@/types"
 
 export default function MyDay() {
   const todos = useAppStore((s) => s.todos)
+  const habits = useAppStore((s) => s.habits)
   const logs = useAppStore((s) => s.logs)
   const isLoading = useAppStore((s) => s.isLoading)
   const loadAll = useAppStore((s) => s.loadAll)
   const updateTodo = useAppStore((s) => s.updateTodo)
   const addHabitLog = useAppStore((s) => s.addHabitLog)
   const deleteHabitLog = useAppStore((s) => s.deleteHabitLog)
+
+  const [numericPrompt, setNumericPrompt] = useState<{
+    todoId: string
+    habitName: string
+    unit: string
+  } | null>(null)
+  const [numericInput, setNumericInput] = useState("")
 
   const today = useMemo(() => format(new Date(), "yyyy-MM-dd"), [])
   const todaysTodos = useMemo(
@@ -25,10 +36,7 @@ export default function MyDay() {
     void loadAll()
   }, [loadAll])
 
-  const handleToggle = async (todoId: string, checked: boolean) => {
-    const todo = todaysTodos.find((t) => t.id === todoId)
-    if (!todo) return
-
+  const performToggle = async (todo: Todo, checked: boolean, numericValue?: number) => {
     await updateTodo({
       ...todo,
       completed: checked,
@@ -42,6 +50,7 @@ export default function MyDay() {
           habitId: todo.linkedHabitId,
           date: today,
           completed: true,
+          value: numericValue,
           createdAt: new Date().toISOString(),
         }
         await addHabitLog(log)
@@ -57,12 +66,80 @@ export default function MyDay() {
     }
   }
 
+  const handleToggle = async (todoId: string, checked: boolean) => {
+    const todo = todaysTodos.find((t) => t.id === todoId)
+    if (!todo) return
+
+    const habit = todo.linkedHabitId ? habits.find((h) => h.id === todo.linkedHabitId) : undefined
+
+    if (checked && habit?.type === "numeric") {
+      setNumericPrompt({
+        todoId: todo.id,
+        habitName: habit.name,
+        unit: habit.unit || "amount",
+      })
+      setNumericInput("")
+      return // Wait for user to submit the modal
+    }
+
+    await performToggle(todo, checked)
+  }
+
+  const handleNumericSubmit = async () => {
+    if (!numericPrompt) return
+    const parsed = parseFloat(numericInput)
+    if (isNaN(parsed)) {
+      alert("Invalid number entered.")
+      return
+    }
+
+    const todo = todaysTodos.find((t) => t.id === numericPrompt.todoId)
+    if (todo) {
+      await performToggle(todo, true, parsed)
+    }
+    setNumericPrompt(null)
+  }
+
   if (isLoading) {
     return <div className="text-sm text-muted-foreground">Loading...</div>
   }
 
   return (
     <div className="space-y-6">
+      {numericPrompt && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <Card className="w-full max-w-sm">
+            <CardHeader>
+              <CardTitle className="text-lg">Log {numericPrompt.habitName}</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <label className="text-sm font-medium">
+                  Amount ({numericPrompt.unit})
+                </label>
+                <Input
+                  type="number"
+                  autoFocus
+                  value={numericInput}
+                  onChange={(e) => setNumericInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") handleNumericSubmit()
+                  }}
+                />
+              </div>
+              <div className="flex justify-end gap-2">
+                <Button variant="ghost" onClick={() => setNumericPrompt(null)}>
+                  Cancel
+                </Button>
+                <Button onClick={handleNumericSubmit} disabled={!numericInput}>
+                  Save Log
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
       <section className="space-y-3">
         <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
           Today
@@ -80,8 +157,8 @@ export default function MyDay() {
               <li key={todo.id} className="flex items-start gap-3 rounded-md border p-3">
                 <Checkbox
                   checked={todo.completed}
-                  onCheckedChange={(checked) => {
-                    void handleToggle(todo.id, checked === true)
+                  onCheckedChange={async (checked) => {
+                    await handleToggle(todo.id, checked === true)
                   }}
                 />
                 <div className="space-y-1">
@@ -106,4 +183,3 @@ export default function MyDay() {
     </div>
   )
 }
-

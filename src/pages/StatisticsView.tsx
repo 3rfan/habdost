@@ -300,7 +300,15 @@ function WidgetRenderer({ widget, habit, onDelete }: { widget: StatisticsWidget,
   )
 }
 
-function MiniHeatmapRenderer({ dateCountMap, maxCount, weeksCount, today }: any) {
+interface ChartProps {
+  dateCountMap: Map<string, number>
+  maxCount: number
+  weeksCount: number
+  today: Date
+  unit?: string
+}
+
+function MiniHeatmapRenderer({ dateCountMap, maxCount, weeksCount, today }: ChartProps) {
   const { weeks } = useMemo(() => {
     const start = startOfWeek(subDays(today, weeksCount * 7 - 1))
     const allDays = eachDayOfInterval({ start, end: today })
@@ -382,7 +390,7 @@ function MiniHeatmapRenderer({ dateCountMap, maxCount, weeksCount, today }: any)
   )
 }
 
-function BarChartRenderer({ dateCountMap, maxCount, weeksCount, today, unit }: any) {
+function BarChartRenderer({ dateCountMap, maxCount, weeksCount, today, unit }: ChartProps) {
   const bars = useMemo(() => {
     const days = weeksCount * 7
     const start = subDays(today, days - 1)

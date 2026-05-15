@@ -4,12 +4,16 @@ import { format } from "date-fns"
 import { Checkbox } from "@/components/ui/checkbox"
 import TodoInput from "@/components/TodoInput"
 import { useAppStore } from "@/store"
+import type { HabitLog } from "@/types"
 
 export default function MyDay() {
-  const todos = useAppStore((state) => state.todos)
-  const isLoading = useAppStore((state) => state.isLoading)
-  const loadAll = useAppStore((state) => state.loadAll)
-  const updateTodo = useAppStore((state) => state.updateTodo)
+  const todos = useAppStore((s) => s.todos)
+  const logs = useAppStore((s) => s.logs)
+  const isLoading = useAppStore((s) => s.isLoading)
+  const loadAll = useAppStore((s) => s.loadAll)
+  const updateTodo = useAppStore((s) => s.updateTodo)
+  const addHabitLog = useAppStore((s) => s.addHabitLog)
+  const deleteHabitLog = useAppStore((s) => s.deleteHabitLog)
 
   const today = useMemo(() => format(new Date(), "yyyy-MM-dd"), [])
   const todaysTodos = useMemo(
@@ -20,6 +24,38 @@ export default function MyDay() {
   useEffect(() => {
     void loadAll()
   }, [loadAll])
+
+  const handleToggle = async (todoId: string, checked: boolean) => {
+    const todo = todaysTodos.find((t) => t.id === todoId)
+    if (!todo) return
+
+    await updateTodo({
+      ...todo,
+      completed: checked,
+      updatedAt: today,
+    })
+
+    if (todo.linkedHabitId) {
+      if (checked) {
+        const log: HabitLog = {
+          id: crypto.randomUUID(),
+          habitId: todo.linkedHabitId,
+          date: today,
+          completed: true,
+          createdAt: new Date().toISOString(),
+        }
+        await addHabitLog(log)
+      } else {
+        // Remove the habit log for today for this habit
+        const existingLog = logs.find(
+          (l) => l.habitId === todo.linkedHabitId && l.date === today
+        )
+        if (existingLog) {
+          await deleteHabitLog(existingLog.id)
+        }
+      }
+    }
+  }
 
   if (isLoading) {
     return <div className="text-sm text-muted-foreground">Loading...</div>
@@ -37,7 +73,7 @@ export default function MyDay() {
       <section className="space-y-3">
         <h3 className="text-sm font-semibold">Tasks</h3>
         {todaysTodos.length === 0 ? (
-          <p className="text-sm text-muted-foreground">No todos yet.</p>
+          <p className="text-sm text-muted-foreground">No todos yet. Add one above or create habits in the Habits tab!</p>
         ) : (
           <ul className="space-y-2">
             {todaysTodos.map((todo) => (
@@ -45,12 +81,7 @@ export default function MyDay() {
                 <Checkbox
                   checked={todo.completed}
                   onCheckedChange={(checked) => {
-                    const isChecked = checked === true
-                    void updateTodo({
-                      ...todo,
-                      completed: isChecked,
-                      updatedAt: today,
-                    })
+                    void handleToggle(todo.id, checked === true)
                   }}
                 />
                 <div className="space-y-1">
@@ -75,3 +106,4 @@ export default function MyDay() {
     </div>
   )
 }
+

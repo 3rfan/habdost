@@ -23,4 +23,4 @@ jobs:
       - name: Typecheck
         run: pnpm tsc -b
       - name: Build
-        run: pnpm build
+        run: pnpm vite build

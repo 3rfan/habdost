@@ -5,7 +5,9 @@ import {
   addHabit,
   addHabitLog,
   addTodo,
+  clearDatabase,
   deleteHabit,
+  deleteHabitLog,
   deleteTodo,
   getAllHabitLogs,
   getAllHabits,
@@ -25,6 +27,8 @@ interface AppState {
   updateTodo: (todo: Todo) => Promise<void>
   deleteTodo: (id: Id) => Promise<void>
   addHabitLog: (log: HabitLog) => Promise<void>
+  deleteHabitLog: (id: Id) => Promise<void>
+  clearAll: () => Promise<void>
 }
 
 export const useAppStore = create<AppState>((set, get) => ({
@@ -64,5 +68,13 @@ export const useAppStore = create<AppState>((set, get) => ({
   addHabitLog: async (log) => {
     await addHabitLog(log)
     set({ logs: [...get().logs, log] })
+  },
+  deleteHabitLog: async (id) => {
+    await deleteHabitLog(id)
+    set({ logs: get().logs.filter((log) => log.id !== id) })
+  },
+  clearAll: async () => {
+    await clearDatabase()
+    set({ habits: [], todos: [], logs: [] })
   },
 }))

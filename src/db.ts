@@ -150,6 +150,29 @@ export async function addHabitLog(log: HabitLog) {
   }
 }
 
+export async function deleteHabitLog(id: Id) {
+  try {
+    const db = await getDb()
+    await db.delete("logs", id)
+  } catch (error) {
+    console.error("Failed to delete habit log", error)
+  }
+}
+
+export async function getHabitLogsByHabitAndDate(
+  habitId: Id,
+  date: string
+): Promise<HabitLog[]> {
+  try {
+    const db = await getDb()
+    const allByDate = await db.getAllFromIndex("logs", "by-date", date)
+    return allByDate.filter((log) => log.habitId === habitId)
+  } catch (error) {
+    console.error("Failed to load habit logs by habit and date", error)
+    return []
+  }
+}
+
 export async function clearDatabase() {
   try {
     const db = await getDb()

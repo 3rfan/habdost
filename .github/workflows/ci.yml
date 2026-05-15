@@ -20,3 +20,7 @@ jobs:
         run: pnpm install
       - name: Lint
         run: pnpm lint
+      - name: Typecheck
+        run: pnpm tsc -b
+      - name: Build
+        run: pnpm build

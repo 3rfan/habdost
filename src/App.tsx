@@ -1,11 +1,11 @@
 import { useEffect, useRef } from "react"
 import { NavLink, Route, Routes } from "react-router-dom"
-import { CalendarDays, ListChecks, Repeat, Settings, Flame } from "lucide-react"
+import { CalendarDays, ListChecks, Repeat, Settings, BarChart } from "lucide-react"
 
 import MyDay from "@/pages/MyDay"
 import CalendarView from "@/pages/CalendarView"
 import HabitManager from "@/pages/HabitManager"
-import HeatmapView from "@/pages/HeatmapView"
+import StatisticsView from "@/pages/StatisticsView"
 import SettingsView from "@/pages/SettingsView"
 import { useAppStore } from "@/store"
 import { generateRecurringTodos } from "@/scheduler"
@@ -45,7 +45,7 @@ function App() {
           <Route path="/" element={<MyDay />} />
           <Route path="/calendar" element={<CalendarView />} />
           <Route path="/habits" element={<HabitManager />} />
-          <Route path="/heatmap" element={<HeatmapView />} />
+          <Route path="/statistics" element={<StatisticsView />} />
           <Route path="/settings" element={<SettingsView />} />
         </Routes>
       </main>
@@ -76,6 +76,17 @@ function App() {
             Calendar
           </NavLink>
           <NavLink
+            to="/statistics"
+            className={({ isActive }) =>
+              `flex flex-col items-center justify-center gap-1 text-xs ${
+                isActive ? "text-foreground" : "text-muted-foreground"
+              }`
+            }
+          >
+            <BarChart className="h-5 w-5" />
+            Statistics
+          </NavLink>
+          <NavLink
             to="/habits"
             className={({ isActive }) =>
               `flex flex-col items-center justify-center gap-1 text-xs ${
@@ -85,17 +96,6 @@ function App() {
           >
             <Repeat className="h-5 w-5" />
             Habits
-          </NavLink>
-          <NavLink
-            to="/heatmap"
-            className={({ isActive }) =>
-              `flex flex-col items-center justify-center gap-1 text-xs ${
-                isActive ? "text-foreground" : "text-muted-foreground"
-              }`
-            }
-          >
-            <Flame className="h-5 w-5" />
-            Heatmap
           </NavLink>
           <NavLink
             to="/settings"

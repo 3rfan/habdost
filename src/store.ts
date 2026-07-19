@@ -35,6 +35,7 @@ interface AppState {
   addHabitLog: (log: HabitLog) => Promise<void>
   deleteHabitLog: (id: Id) => Promise<void>
   addWidget: (widget: StatisticsWidget) => Promise<void>
+  updateWidget: (widget: StatisticsWidget) => Promise<void>
   deleteWidget: (id: Id) => Promise<void>
   clearAll: () => Promise<void>
 }
@@ -105,6 +106,10 @@ export const useAppStore = create<AppState>((set, get) => ({
   addWidget: async (widget) => {
     await addWidget(widget)
     set({ widgets: [...get().widgets, widget] })
+  },
+  updateWidget: async (widget) => {
+    await addWidget(widget)
+    set({ widgets: get().widgets.map((w) => (w.id === widget.id ? widget : w)) })
   },
   deleteWidget: async (id) => {
     await deleteWidget(id)

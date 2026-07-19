@@ -23,16 +23,18 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { useAppStore } from "@/store"
-import type { HabitLog, Todo } from "@/types"
+import type { Habit, HabitLog, Todo } from "@/types"
 
 function SortableTodoItem({
   todo,
   handleToggle,
   handleStarToggle,
+  habits,
 }: {
   todo: Todo
   handleToggle: (todoId: string, checked: boolean) => Promise<void>
   handleStarToggle: (todoId: string) => Promise<void>
+  habits: Habit[]
 }) {
   const {
     attributes,
@@ -48,6 +50,8 @@ function SortableTodoItem({
     transition,
     opacity: isDragging ? 0.5 : 1,
   }
+
+  const habit = todo.linkedHabitId ? habits.find((h) => h.id === todo.linkedHabitId) : undefined
 
   return (
     <li
@@ -77,6 +81,7 @@ function SortableTodoItem({
               : "text-sm text-card-foreground truncate"
           }
         >
+          {habit?.emoji && <span className="mr-1.5">{habit.emoji}</span>}
           {todo.title}
         </p>
         {todo.linkedHabitId ? (
@@ -344,6 +349,7 @@ export default function MyDay() {
                           todo={todo}
                           handleToggle={handleToggle}
                           handleStarToggle={handleStarToggle}
+                          habits={habits}
                         />
                       ))}
                     </ul>
@@ -373,6 +379,7 @@ export default function MyDay() {
                           todo={todo}
                           handleToggle={handleToggle}
                           handleStarToggle={handleStarToggle}
+                          habits={habits}
                         />
                       ))}
                     </ul>

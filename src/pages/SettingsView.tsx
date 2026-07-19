@@ -5,13 +5,14 @@ import { Download, Upload, AlertTriangle, Settings } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { useAppStore } from "@/store"
-import { addHabit, addTodo, addHabitLog } from "@/db"
-import type { Habit, Todo, HabitLog } from "@/types"
+import { addHabit, addTodo, addHabitLog, addWidget } from "@/db"
+import type { Habit, Todo, HabitLog, StatisticsWidget } from "@/types"
 
 export default function SettingsView() {
   const habits = useAppStore((s) => s.habits)
   const todos = useAppStore((s) => s.todos)
   const logs = useAppStore((s) => s.logs)
+  const widgets = useAppStore((s) => s.widgets)
   const clearAll = useAppStore((s) => s.clearAll)
   const loadAll = useAppStore((s) => s.loadAll)
 
@@ -21,7 +22,7 @@ export default function SettingsView() {
   const [statusMessage, setStatusMessage] = useState<string | null>(null)
 
   const handleExport = () => {
-    const data = JSON.stringify({ habits, todos, logs }, null, 2)
+    const data = JSON.stringify({ habits, todos, logs, widgets }, null, 2)
     const blob = new Blob([data], { type: "application/json" })
     const url = URL.createObjectURL(blob)
     const a = document.createElement("a")
@@ -67,6 +68,7 @@ export default function SettingsView() {
         habits: Habit[]
         todos: Todo[]
         logs: HabitLog[]
+        widgets?: StatisticsWidget[]
       }
 
       await clearAll()
@@ -74,6 +76,7 @@ export default function SettingsView() {
       for (const habit of parsed.habits) await addHabit(habit)
       for (const todo of parsed.todos) await addTodo(todo)
       for (const log of parsed.logs) await addHabitLog(log)
+      for (const widget of parsed.widgets ?? []) await addWidget(widget)
 
       await loadAll()
 

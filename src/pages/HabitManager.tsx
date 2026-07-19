@@ -25,6 +25,7 @@ export default function HabitManager() {
 
   const [name, setName] = useState("")
   const [tag, setTag] = useState("")
+  const [emoji, setEmoji] = useState("")
   const [type, setType] = useState<"boolean" | "numeric">("boolean")
   const [unit, setUnit] = useState("")
   const [scheduledDays, setScheduledDays] = useState<number[]>([])
@@ -40,8 +41,14 @@ export default function HabitManager() {
 
     const trimmedName = name.trim()
     const trimmedTag = tag.trim().toLowerCase().replace(/^#/, "")
+    const emojiSpanned = [...emoji.trim()]
 
     if (!trimmedName || !trimmedTag || scheduledDays.length === 0) {
+      return
+    }
+
+    if (emojiSpanned.length > 2) {
+      alert("Emoji should be maximum 2 characters/emojis!")
       return
     }
 
@@ -56,6 +63,7 @@ export default function HabitManager() {
       tag: trimmedTag,
       type: type,
       unit: type === "numeric" ? unit.trim() : undefined,
+      emoji: emojiSpanned.join("") || undefined,
       scheduledDays: [...scheduledDays].sort(),
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
@@ -64,6 +72,7 @@ export default function HabitManager() {
     await addHabit(habit)
     setName("")
     setTag("")
+    setEmoji("")
     setType("boolean")
     setUnit("")
     setScheduledDays([])
@@ -102,6 +111,16 @@ export default function HabitManager() {
                 value={tag}
                 onChange={(e) => setTag(e.target.value)}
                 placeholder="e.g. gym"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="habit-emoji">Emoji (optional)</Label>
+              <Input
+                id="habit-emoji"
+                value={emoji}
+                onChange={(e) => setEmoji(e.target.value)}
+                placeholder="e.g. 🙂"
               />
             </div>
 
@@ -198,7 +217,10 @@ export default function HabitManager() {
                 <CardContent className="flex items-center justify-between py-3">
                   <div className="space-y-1">
                     <div className="flex items-center gap-2">
-                      <p className="text-sm font-medium">{habit.name}</p>
+                      <p className="text-sm font-medium">
+                        {habit.emoji && <span className="mr-1.5">{habit.emoji}</span>}
+                        {habit.name}
+                      </p>
                       <span className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
                         #{habit.tag}
                       </span>

@@ -6,7 +6,7 @@ import {
   eachDayOfInterval,
   getDay,
 } from "date-fns"
-import { Flame, Plus, Trash2 } from "lucide-react"
+import { Flame, Plus, Trash2, Pencil } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -36,15 +36,18 @@ export default function StatisticsView() {
   const habits = useAppStore((s) => s.habits)
   const widgets = useAppStore((s) => s.widgets)
   const addWidget = useAppStore((s) => s.addWidget)
+  const updateWidget = useAppStore((s) => s.updateWidget)
   const deleteWidget = useAppStore((s) => s.deleteWidget)
 
   const [mainTimeframe, setMainTimeframe] = useState<Timeframe>("1y")
   const [selectedHabitId, setSelectedHabitId] = useState<string | null>(null)
 
   const [showAddModal, setShowAddModal] = useState(false)
+  const [editingWidget, setEditingWidget] = useState<StatisticsWidget | null>(null)
   const [newWidgetHabit, setNewWidgetHabit] = useState<string>("")
   const [newWidgetType, setNewWidgetType] = useState<GraphType>("mini-heatmap")
   const [newWidgetTimeframe, setNewWidgetTimeframe] = useState<Timeframe>("1m")
+
 
   // MAIN HEATMAP DATA
   const { dateCountMap, maxCount } = useMemo(() => {
@@ -96,14 +99,24 @@ export default function StatisticsView() {
 
   const handleAddWidget = async () => {
     if (!newWidgetHabit) return
-    await addWidget({
-      id: crypto.randomUUID(),
-      habitId: newWidgetHabit,
-      graphType: newWidgetType,
-      timeframe: newWidgetTimeframe,
-      createdAt: new Date().toISOString()
-    })
+    if (editingWidget) {
+      await updateWidget({
+        ...editingWidget,
+        habitId: newWidgetHabit,
+        graphType: newWidgetType,
+        timeframe: newWidgetTimeframe,
+      })
+    } else {
+      await addWidget({
+        id: crypto.randomUUID(),
+        habitId: newWidgetHabit,
+        graphType: newWidgetType,
+        timeframe: newWidgetTimeframe,
+        createdAt: new Date().toISOString()
+      })
+    }
     setShowAddModal(false)
+    setEditingWidget(null)
   }
 
   return (
@@ -199,7 +212,7 @@ export default function StatisticsView() {
       {/* DASHBOARD WIDGETS HEADER */}
       <div className="flex items-center justify-between pt-4">
         <h2 className="text-lg font-semibold">Custom Dashboard</h2>
-        <Button size="sm" variant="outline" onClick={() => setShowAddModal(true)}>
+        <Button size="sm" variant="outline" onClick={() => { setEditingWidget(null); setNewWidgetHabit(""); setNewWidgetType("mini-heatmap"); setNewWidgetTimeframe("1m"); setShowAddModal(true); }}>
           <Plus className="mr-1 h-4 w-4" /> Add Graph
         </Button>
       </div>
@@ -208,12 +221,14 @@ export default function StatisticsView() {
       {showAddModal && (
         <Card className="border-primary">
           <CardContent className="space-y-4 pt-6">
-            <h3 className="text-sm font-semibold">Add New Widget</h3>
+            <h3 className="text-sm font-semibold">
+              {editingWidget ? "Update Graph Widget" : "Add New Widget"}
+            </h3>
             <div className="grid gap-2">
               <label className="text-xs">Habit</label>
               <select className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm" value={newWidgetHabit} onChange={(e) => setNewWidgetHabit(e.target.value)}>
                 <option value="">Select a habit...</option>
-                {habits.map((h) => <option key={h.id} value={h.id}>#{h.tag}</option>)}
+                {habits.map((h) => <option key={h.id} value={h.id}>{h.emoji ? `${h.emoji} ` : ""}#{h.tag}</option>)}
               </select>
             </div>
             <div className="grid gap-2">
@@ -230,8 +245,10 @@ export default function StatisticsView() {
               </select>
             </div>
             <div className="flex justify-end gap-2 pt-2">
-              <Button size="sm" variant="ghost" onClick={() => setShowAddModal(false)}>Cancel</Button>
-              <Button size="sm" onClick={handleAddWidget} disabled={!newWidgetHabit}>Save Widget</Button>
+              <Button size="sm" variant="ghost" onClick={() => { setShowAddModal(false); setEditingWidget(null); }}>Cancel</Button>
+              <Button size="sm" onClick={handleAddWidget} disabled={!newWidgetHabit}>
+                {editingWidget ? "Update Widget" : "Save Widget"}
+              </Button>
             </div>
           </CardContent>
         </Card>
@@ -244,6 +261,13 @@ export default function StatisticsView() {
             key={widget.id}
             widget={widget}
             habit={habits.find(h => h.id === widget.habitId)}
+            onEdit={() => {
+              setEditingWidget(widget)
+              setNewWidgetHabit(widget.habitId)
+              setNewWidgetType(widget.graphType)
+              setNewWidgetTimeframe(widget.timeframe)
+              setShowAddModal(true)
+            }}
             onDelete={() => deleteWidget(widget.id)}
           />
         ))}
@@ -255,7 +279,17 @@ export default function StatisticsView() {
   )
 }
 
-function WidgetRenderer({ widget, habit, onDelete }: { widget: StatisticsWidget, habit?: Habit, onDelete: () => void }) {
+function WidgetRenderer({
+  widget,
+  habit,
+  onEdit,
+  onDelete,
+}: {
+  widget: StatisticsWidget
+  habit?: Habit
+  onEdit: () => void
+  onDelete: () => void
+}) {
   const logs = useAppStore((s) => s.logs)
 
   const { dateCountMap, maxCount } = useMemo(() => {
@@ -279,11 +313,29 @@ function WidgetRenderer({ widget, habit, onDelete }: { widget: StatisticsWidget,
 
   return (
     <Card className="relative overflow-hidden">
-      <Button variant="ghost" size="icon" onClick={onDelete} className="absolute right-2 top-2 h-6 w-6 text-muted-foreground hover:text-destructive">
-        <Trash2 className="h-3 w-3" />
-      </Button>
+      <div className="absolute right-2 top-2 flex gap-1">
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={onEdit}
+          className="h-6 w-6 text-muted-foreground hover:text-foreground"
+        >
+          <Pencil className="h-3 w-3" />
+        </Button>
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={onDelete}
+          className="h-6 w-6 text-muted-foreground hover:text-destructive"
+        >
+          <Trash2 className="h-3 w-3" />
+        </Button>
+      </div>
       <CardHeader className="pb-2 pt-4">
-        <CardTitle className="text-sm">#{habit.tag}</CardTitle>
+        <CardTitle className="text-sm">
+          {habit.emoji && <span className="mr-1.5">{habit.emoji}</span>}
+          #{habit.tag}
+        </CardTitle>
         <p className="text-xs text-muted-foreground capitalize">
           {widget.graphType.replace("-", " ")} • {TIMEFRAMES.find((t) => t.value === widget.timeframe)?.label}
         </p>

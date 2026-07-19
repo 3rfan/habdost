@@ -7,6 +7,7 @@ export interface Habit {
   scheduledDays: number[]
   type?: "boolean" | "numeric"
   unit?: string
+  emoji?: string
   createdAt: string
   updatedAt: string
 }

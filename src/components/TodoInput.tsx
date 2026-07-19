@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react"
+import { useMemo, useState, useRef } from "react"
 import { format } from "date-fns"
 
 import { useAppStore } from "@/store"
@@ -28,6 +28,12 @@ export default function TodoInput() {
   const [value, setValue] = useState("")
   const habits = useAppStore((state) => state.habits)
   const addTodo = useAppStore((state) => state.addTodo)
+
+  const [activeSuggestionIndex, setActiveSuggestionIndex] = useState(0)
+  const [suggestions, setSuggestions] = useState<Habit[]>([])
+  const [showDropdown, setShowDropdown] = useState(false)
+  const [cursorPos, setCursorPos] = useState(0)
+  const inputRef = useRef<HTMLInputElement>(null)
 
   const today = useMemo(() => format(new Date(), "yyyy-MM-dd"), [])
 
@@ -59,16 +65,113 @@ export default function TodoInput() {
 
     await addTodo(todo)
     setValue("")
+    setShowDropdown(false)
+  }
+
+  const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const val = event.target.value
+    setValue(val)
+
+    const selectionStart = event.target.selectionStart ?? 0
+    setCursorPos(selectionStart)
+
+    const textBeforeCursor = val.slice(0, selectionStart)
+    const match = /#(\w*)$/.exec(textBeforeCursor)
+
+    if (match) {
+      const partialTag = match[1].toLowerCase()
+      const filtered = habits.filter(
+        (h) =>
+          h.tag.toLowerCase().startsWith(partialTag) ||
+          h.name.toLowerCase().includes(partialTag)
+      )
+      setSuggestions(filtered)
+      setActiveSuggestionIndex(0)
+      setShowDropdown(filtered.length > 0)
+    } else {
+      setShowDropdown(false)
+      setSuggestions([])
+    }
+  }
+
+  const selectSuggestion = (habit: Habit) => {
+    const textBeforeCursor = value.slice(0, cursorPos)
+    const textAfterCursor = value.slice(cursorPos)
+
+    // Replace the trailing #word with #<tag>
+    const newValue = textBeforeCursor.replace(/#(\w*)$/, `#${habit.tag} `) + textAfterCursor
+    setValue(newValue)
+
+    setShowDropdown(false)
+    setSuggestions([])
+
+    // Refocus input and restore cursor position
+    setTimeout(() => {
+      if (inputRef.current) {
+        inputRef.current.focus()
+        const newCursorPos = textBeforeCursor.replace(/#(\w*)$/, `#${habit.tag} `).length
+        inputRef.current.setSelectionRange(newCursorPos, newCursorPos)
+      }
+    }, 0)
+  }
+
+  const handleKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
+    if (!showDropdown || suggestions.length === 0) return
+
+    switch (event.key) {
+      case "ArrowDown":
+        event.preventDefault()
+        setActiveSuggestionIndex((prev) => (prev + 1) % suggestions.length)
+        break
+      case "ArrowUp":
+        event.preventDefault()
+        setActiveSuggestionIndex((prev) => (prev - 1 + suggestions.length) % suggestions.length)
+        break
+      case "Enter":
+        event.preventDefault()
+        selectSuggestion(suggestions[activeSuggestionIndex])
+        break
+      case "Escape":
+        event.preventDefault()
+        setShowDropdown(false)
+        break
+      default:
+        break
+    }
   }
 
   return (
     <form onSubmit={handleSubmit} className="flex gap-2">
-      <input
-        value={value}
-        onChange={(event) => setValue(event.target.value)}
-        placeholder="Add a todo or #habit tag"
-        className="h-10 flex-1 rounded-md border border-input bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
-      />
+      <div className="relative flex-1">
+        <input
+          ref={inputRef}
+          value={value}
+          onChange={handleInputChange}
+          onKeyDown={handleKeyDown}
+          onBlur={() => setTimeout(() => setShowDropdown(false), 150)}
+          placeholder="Add a todo or #habit tag"
+          className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        />
+        {showDropdown && suggestions.length > 0 && (
+          <ul className="absolute left-0 right-0 top-full z-50 mt-1 max-h-60 overflow-y-auto rounded-md border bg-popover p-1 shadow-md">
+            {suggestions.map((suggestion, index) => (
+              <li
+                key={suggestion.id}
+                onClick={() => selectSuggestion(suggestion)}
+                onMouseEnter={() => setActiveSuggestionIndex(index)}
+                className={`flex flex-col rounded-sm px-3 py-1.5 text-sm cursor-pointer ${
+                  index === activeSuggestionIndex
+                    ? "bg-accent text-accent-foreground"
+                    : "text-popover-foreground hover:bg-accent hover:text-accent-foreground"
+                }`}
+              >
+                <span className="font-mono font-medium">#{suggestion.tag}</span>
+                <span className="text-xs text-muted-foreground">{suggestion.name}</span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
       <button
         type="submit"
         className="h-10 rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground"

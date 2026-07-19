@@ -16,6 +16,7 @@ import {
   getAllTodos,
   getAllWidgets,
   updateTodo,
+  reorderTodos as reorderTodosDb,
 } from "@/db"
 
 interface AppState {
@@ -30,6 +31,7 @@ interface AppState {
   addTodo: (todo: Todo) => Promise<void>
   updateTodo: (todo: Todo) => Promise<void>
   deleteTodo: (id: Id) => Promise<void>
+  reorderTodos: (orderedIds: string[]) => Promise<void>
   addHabitLog: (log: HabitLog) => Promise<void>
   deleteHabitLog: (id: Id) => Promise<void>
   addWidget: (widget: StatisticsWidget) => Promise<void>
@@ -72,6 +74,25 @@ export const useAppStore = create<AppState>((set, get) => ({
   deleteTodo: async (id) => {
     await deleteTodo(id)
     set({ todos: get().todos.filter((todo) => todo.id !== id) })
+  },
+  reorderTodos: async (orderedIds) => {
+    const currentTodos = get().todos
+    const idMap = new Map(orderedIds.map((id, index) => [id, index * 10]))
+    
+    const updatedTodos: Todo[] = []
+    const newStoreTodos = currentTodos.map((todo) => {
+      if (idMap.has(todo.id)) {
+        const newTodo = { ...todo, sortOrder: idMap.get(todo.id) }
+        updatedTodos.push(newTodo)
+        return newTodo
+      }
+      return todo
+    })
+
+    if (updatedTodos.length > 0) {
+      await reorderTodosDb(updatedTodos)
+    }
+    set({ todos: newStoreTodos })
   },
   addHabitLog: async (log) => {
     await addHabitLog(log)

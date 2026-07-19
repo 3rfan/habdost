@@ -17,6 +17,8 @@ export interface Todo {
   date: string
   completed: boolean
   linkedHabitId?: Id | null
+  starred?: boolean
+  sortOrder?: number
   createdAt: string
   updatedAt: string
 }

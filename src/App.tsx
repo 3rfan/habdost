@@ -1,6 +1,6 @@
-import { useEffect, useRef } from "react"
+import { useEffect, useRef, useState } from "react"
 import { NavLink, Route, Routes } from "react-router-dom"
-import { CalendarDays, ListChecks, Repeat, Settings, BarChart } from "lucide-react"
+import { CalendarDays, ListChecks, Repeat, Settings, BarChart, Moon, Sun } from "lucide-react"
 
 import MyDay from "@/pages/MyDay"
 import CalendarView from "@/pages/CalendarView"
@@ -14,6 +14,20 @@ function App() {
   const loadAll = useAppStore((s) => s.loadAll)
   const addTodo = useAppStore((s) => s.addTodo)
   const schedulerRan = useRef(false)
+
+  // Initialize from DOM — the FOCT script in index.html already applied the
+  // correct class before React mounted, so we read from the DOM rather than
+  // localStorage to stay perfectly in sync with what the user sees.
+  const [isDark, setIsDark] = useState(
+    () => document.documentElement.classList.contains("dark")
+  )
+
+  const toggleDarkMode = () => {
+    const next = !isDark
+    setIsDark(next)
+    document.documentElement.classList.toggle("dark", next)
+    localStorage.setItem("habdost-theme", next ? "dark" : "light")
+  }
 
   useEffect(() => {
     const init = async () => {
@@ -35,8 +49,19 @@ function App() {
   return (
     <div className="min-h-dvh bg-background text-foreground">
       <header className="fixed inset-x-0 top-0 z-10 border-b bg-background/80 backdrop-blur">
-        <div className="mx-auto flex h-14 max-w-screen-sm items-center px-4">
+        <div className="mx-auto flex h-14 max-w-screen-sm items-center justify-between px-4">
           <h1 className="text-lg font-semibold">HabDost</h1>
+          <button
+            onClick={toggleDarkMode}
+            aria-label="Toggle dark mode"
+            className="flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+          >
+            {isDark ? (
+              <Sun className="h-5 w-5" />
+            ) : (
+              <Moon className="h-5 w-5" />
+            )}
+          </button>
         </div>
       </header>
 
@@ -115,4 +140,3 @@ function App() {
 }
 
 export default App
-

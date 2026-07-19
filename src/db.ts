@@ -237,3 +237,16 @@ export async function deleteWidget(id: Id) {
     console.error("Failed to delete widget", error)
   }
 }
+
+export async function reorderTodos(todos: Todo[]) {
+  try {
+    const db = await getDb()
+    const tx = db.transaction("todos", "readwrite")
+    await Promise.all([
+      ...todos.map((t) => tx.store.put(t)),
+      tx.done,
+    ])
+  } catch (error) {
+    console.error("Failed to reorder todos", error)
+  }
+}

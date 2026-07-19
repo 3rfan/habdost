@@ -18,6 +18,9 @@ export function generateRecurringTodos(
   const dayOfWeek = getDay(new Date()) // 0=Sun, 1=Mon, ..., 6=Sat
 
   const todaysTodos = existingTodos.filter((todo) => todo.date === today)
+  const todaySortOrders = todaysTodos.map((t) => t.sortOrder ?? 0)
+  let nextSortOrder = Math.max(0, ...todaySortOrders) + 10
+
   const linkedHabitIdsToday = new Set(
     todaysTodos
       .map((todo) => todo.linkedHabitId)
@@ -41,11 +44,13 @@ export function generateRecurringTodos(
       date: today,
       completed: false,
       linkedHabitId: habit.id,
+      sortOrder: nextSortOrder,
       createdAt: today,
       updatedAt: today,
     }
 
     newTodos.push(todo)
+    nextSortOrder += 10
   }
 
   return newTodos

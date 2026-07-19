@@ -26,6 +26,7 @@ function findLinkedHabit(tags: string[], habits: Habit[]) {
 
 export default function TodoInput() {
   const [value, setValue] = useState("")
+  const [selectedDate, setSelectedDate] = useState("")
   const habits = useAppStore((state) => state.habits)
   const addTodo = useAppStore((state) => state.addTodo)
 
@@ -53,10 +54,12 @@ export default function TodoInput() {
       return
     }
 
+    const targetDate = selectedDate || today
+
     const todo: Todo = {
       id: crypto.randomUUID(),
       title,
-      date: today,
+      date: targetDate,
       completed: false,
       linkedHabitId: linkedHabit?.id ?? null,
       createdAt: today,
@@ -65,6 +68,7 @@ export default function TodoInput() {
 
     await addTodo(todo)
     setValue("")
+    setSelectedDate("")
     setShowDropdown(false)
   }
 
@@ -172,9 +176,15 @@ export default function TodoInput() {
           </ul>
         )}
       </div>
+      <input
+        type="date"
+        value={selectedDate}
+        onChange={(event) => setSelectedDate(event.target.value)}
+        className="h-10 rounded-md border border-input bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring text-muted-foreground w-36"
+      />
       <button
         type="submit"
-        className="h-10 rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground"
+        className="h-10 rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground shrink-0"
       >
         Add
       </button>

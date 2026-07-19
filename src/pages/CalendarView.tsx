@@ -10,14 +10,37 @@ import {
   isSameDay,
   addMonths,
   subMonths,
+  parseISO,
+  differenceInCalendarDays,
+  getDay,
 } from "date-fns"
 import { ChevronLeft, ChevronRight, CalendarDays } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { useAppStore } from "@/store"
+import type { Habit, Todo } from "@/types"
 
 const WEEKDAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
+
+const isHabitDueOnDate = (habit: Habit, date: Date) => {
+  if (habit.recurrenceType === "interval") {
+    if (!habit.recurrenceStartDate || !habit.recurrenceInterval) return false
+    const start = parseISO(habit.recurrenceStartDate)
+    const diff = differenceInCalendarDays(date, start)
+    return diff >= 0 && diff % habit.recurrenceInterval === 0
+  }
+  // Default: weekdays
+  const dayOfWeek = getDay(date)
+  return habit.scheduledDays.includes(dayOfWeek)
+}
+
+const getTodoStatus = (todo: Todo, dateStr: string) => {
+  if (todo.completed) return "completed"
+  const todayStr = format(new Date(), "yyyy-MM-dd")
+  if (dateStr < todayStr) return "missed"
+  return "scheduled"
+}
 
 export default function CalendarView() {
   const todos = useAppStore((state) => state.todos)
@@ -42,9 +65,7 @@ export default function CalendarView() {
   const selectedTodos = useMemo(
     () =>
       selectedDateStr
-        ? todos.filter(
-            (todo) => todo.date === selectedDateStr && todo.completed
-          )
+        ? todos.filter((todo) => todo.date === selectedDateStr)
         : [],
     [todos, selectedDateStr]
   )
@@ -69,8 +90,30 @@ export default function CalendarView() {
     return dates
   }, [todos, logs])
 
-  const getHabitName = (habitId: string) => {
-    return habits.find((h) => h.id === habitId)?.name ?? "Unknown habit"
+  // Build a set of calendar dates that are scheduled/due but not completed
+  const calendarScheduledState = useMemo(() => {
+    const scheduled = new Set<string>()
+    for (const day of calendarDays) {
+      const dateStr = format(day, "yyyy-MM-dd")
+      
+      const hasTodo = todos.some((t) => t.date === dateStr)
+      if (hasTodo) {
+        scheduled.add(dateStr)
+        continue
+      }
+
+      const hasHabit = habits.some((h) => isHabitDueOnDate(h, day))
+      if (hasHabit) {
+        scheduled.add(dateStr)
+      }
+    }
+    return scheduled
+  }, [calendarDays, todos, habits])
+
+  const getHabitDisplay = (habitId: string) => {
+    const h = habits.find((x) => x.id === habitId)
+    if (!h) return "Unknown habit"
+    return h.emoji ? `${h.emoji} ${h.name}` : h.name
   }
 
   return (
@@ -115,6 +158,7 @@ export default function CalendarView() {
           const isSelected = selectedDate ? isSameDay(day, selectedDate) : false
           const isToday = isSameDay(day, new Date())
           const hasActivity = activeDates.has(dateStr)
+          const isScheduled = calendarScheduledState.has(dateStr)
 
           return (
             <button
@@ -134,6 +178,9 @@ export default function CalendarView() {
               {hasActivity && !isSelected && (
                 <span className="absolute bottom-1 left-1/2 h-1 w-1 -translate-x-1/2 rounded-full bg-primary" />
               )}
+              {!hasActivity && isScheduled && !isSelected && (
+                <span className="absolute bottom-1 left-1/2 h-1 w-1 -translate-x-1/2 rounded-full border border-primary bg-transparent" />
+              )}
             </button>
           )
         })}
@@ -151,33 +198,61 @@ export default function CalendarView() {
               <CardContent className="flex flex-col items-center justify-center py-6 text-center">
                 <CalendarDays className="mb-2 h-6 w-6 text-muted-foreground/50" />
                 <p className="text-sm text-muted-foreground">
-                  No completed activity on this date.
+                  No activity on this date.
                 </p>
               </CardContent>
             </Card>
           ) : (
             <div className="space-y-2">
-              {selectedTodos.map((todo) => (
-                <Card key={todo.id}>
-                  <CardContent className="py-2.5">
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs text-muted-foreground">✓</span>
-                      <p className="text-sm">{todo.title}</p>
-                      {todo.linkedHabitId && (
-                        <span className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
-                          habit
-                        </span>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
+              {selectedTodos.map((todo) => {
+                const status = getTodoStatus(todo, todo.date)
+                const habit = todo.linkedHabitId ? habits.find((h) => h.id === todo.linkedHabitId) : undefined
+
+                return (
+                  <Card key={todo.id} className={status === "missed" ? "border-amber-500/50 bg-amber-500/5" : ""}>
+                    <CardContent className="py-2.5">
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2 min-w-0">
+                          {status === "completed" && (
+                            <span className="text-xs text-muted-foreground shrink-0">✓</span>
+                          )}
+                          {status === "scheduled" && (
+                            <span className="text-xs text-blue-500 shrink-0">📅</span>
+                          )}
+                          {status === "missed" && (
+                            <span className="text-xs text-amber-500 shrink-0 font-semibold">⚠️</span>
+                          )}
+                          <p className={`text-sm truncate ${status === "completed" ? "text-muted-foreground line-through" : ""}`}>
+                            {habit?.emoji && <span className="mr-1.5">{habit.emoji}</span>}
+                            {todo.title}
+                          </p>
+                          {todo.linkedHabitId && (
+                            <span className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground shrink-0">
+                              habit
+                            </span>
+                          )}
+                        </div>
+                        {status === "missed" && (
+                          <span className="text-[10px] font-semibold text-amber-500 uppercase tracking-wider shrink-0">
+                            Missed
+                          </span>
+                        )}
+                        {status === "scheduled" && (
+                          <span className="text-[10px] font-semibold text-blue-500 uppercase tracking-wider shrink-0">
+                            Planned
+                          </span>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                )
+              })}
               {selectedLogs.map((log) => (
                 <Card key={log.id}>
                   <CardContent className="py-2.5">
                     <div className="flex items-center gap-2">
                       <span className="text-xs text-green-500">●</span>
-                      <p className="text-sm">{getHabitName(log.habitId)}</p>
+                      <p className="text-sm">{getHabitDisplay(log.habitId)}</p>
                       <span className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
                         habit log
                       </span>

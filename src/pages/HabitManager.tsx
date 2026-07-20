@@ -1,4 +1,5 @@
 import { useState } from "react"
+import { format } from "date-fns"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -30,6 +31,10 @@ export default function HabitManager() {
   const [unit, setUnit] = useState("")
   const [scheduledDays, setScheduledDays] = useState<number[]>([])
 
+  const [recurrenceType, setRecurrenceType] = useState<"weekdays" | "interval">("weekdays")
+  const [recurrenceInterval, setRecurrenceInterval] = useState(1)
+  const [recurrenceStartDate, setRecurrenceStartDate] = useState(() => format(new Date(), "yyyy-MM-dd"))
+
   const toggleDay = (day: number) => {
     setScheduledDays((prev) =>
       prev.includes(day) ? prev.filter((d) => d !== day) : [...prev, day]
@@ -43,7 +48,14 @@ export default function HabitManager() {
     const trimmedTag = tag.trim().toLowerCase().replace(/^#/, "")
     const emojiSpanned = [...emoji.trim()]
 
-    if (!trimmedName || !trimmedTag || scheduledDays.length === 0) {
+    if (!trimmedName || !trimmedTag) {
+      return
+    }
+
+    if (recurrenceType === "weekdays" && scheduledDays.length === 0) {
+      return
+    }
+    if (recurrenceType === "interval" && (!recurrenceInterval || recurrenceInterval < 1)) {
       return
     }
 
@@ -64,7 +76,10 @@ export default function HabitManager() {
       type: type,
       unit: type === "numeric" ? unit.trim() : undefined,
       emoji: emojiSpanned.join("") || undefined,
-      scheduledDays: [...scheduledDays].sort(),
+      recurrenceType,
+      recurrenceInterval: recurrenceType === "interval" ? recurrenceInterval : undefined,
+      recurrenceStartDate: recurrenceType === "interval" ? recurrenceStartDate : undefined,
+      scheduledDays: recurrenceType === "weekdays" ? [...scheduledDays].sort() : [],
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     }
@@ -76,6 +91,9 @@ export default function HabitManager() {
     setType("boolean")
     setUnit("")
     setScheduledDays([])
+    setRecurrenceType("weekdays")
+    setRecurrenceInterval(1)
+    setRecurrenceStartDate(format(new Date(), "yyyy-MM-dd"))
   }
 
   const handleDelete = async (id: string) => {
@@ -163,32 +181,87 @@ export default function HabitManager() {
             )}
 
             <div className="space-y-2">
-              <Label>Repeat on</Label>
-              <div className="flex flex-wrap gap-2">
-                {DAYS.map((day) => {
-                  const isSelected = scheduledDays.includes(day.value)
-                  return (
-                    <button
-                      key={day.value}
-                      type="button"
-                      onClick={() => toggleDay(day.value)}
-                      className={`flex h-9 w-11 items-center justify-center rounded-md border text-xs font-medium transition-colors ${
-                        isSelected
-                          ? "border-primary bg-primary text-primary-foreground"
-                          : "border-input bg-background text-muted-foreground hover:bg-accent hover:text-accent-foreground"
-                      }`}
-                    >
-                      {day.label}
-                    </button>
-                  )
-                })}
+              <Label>Repeat Pattern</Label>
+              <div className="flex gap-4">
+                <label className="flex items-center gap-2 text-sm cursor-pointer">
+                  <input
+                    type="radio"
+                    name="recurrence-type"
+                    value="weekdays"
+                    checked={recurrenceType === "weekdays"}
+                    onChange={() => setRecurrenceType("weekdays")}
+                  />
+                  Specific Weekdays
+                </label>
+                <label className="flex items-center gap-2 text-sm cursor-pointer">
+                  <input
+                    type="radio"
+                    name="recurrence-type"
+                    value="interval"
+                    checked={recurrenceType === "interval"}
+                    onChange={() => setRecurrenceType("interval")}
+                  />
+                  Every N Days
+                </label>
               </div>
             </div>
+
+            {recurrenceType === "weekdays" ? (
+              <div className="space-y-2">
+                <Label>Repeat on</Label>
+                <div className="flex flex-wrap gap-2">
+                  {DAYS.map((day) => {
+                    const isSelected = scheduledDays.includes(day.value)
+                    return (
+                      <button
+                        key={day.value}
+                        type="button"
+                        onClick={() => toggleDay(day.value)}
+                        className={`flex h-9 w-11 items-center justify-center rounded-md border text-xs font-medium transition-colors ${
+                          isSelected
+                            ? "border-primary bg-primary text-primary-foreground"
+                            : "border-input bg-background text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+                        }`}
+                      >
+                        {day.label}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+            ) : (
+              <div className="flex gap-4">
+                <div className="flex-1 space-y-2">
+                  <Label htmlFor="recurrence-interval">Every (days)</Label>
+                  <Input
+                    id="recurrence-interval"
+                    type="number"
+                    min={1}
+                    value={recurrenceInterval}
+                    onChange={(e) => setRecurrenceInterval(parseInt(e.target.value) || 1)}
+                  />
+                </div>
+                <div className="flex-1 space-y-2">
+                  <Label htmlFor="recurrence-start-date">Start Date</Label>
+                  <Input
+                    id="recurrence-start-date"
+                    type="date"
+                    value={recurrenceStartDate}
+                    onChange={(e) => setRecurrenceStartDate(e.target.value)}
+                  />
+                </div>
+              </div>
+            )}
 
             <Button
               type="submit"
               className="w-full"
-              disabled={!name.trim() || !tag.trim() || scheduledDays.length === 0}
+              disabled={
+                !name.trim() ||
+                !tag.trim() ||
+                (recurrenceType === "weekdays" && scheduledDays.length === 0) ||
+                (recurrenceType === "interval" && (!recurrenceInterval || recurrenceInterval < 1))
+              }
             >
               Create Habit
             </Button>
@@ -226,9 +299,11 @@ export default function HabitManager() {
                       </span>
                     </div>
                     <p className="text-xs text-muted-foreground">
-                      {habit.scheduledDays
-                        .map((d) => DAYS.find((day) => day.value === d)?.label)
-                        .join(", ")}
+                      {habit.recurrenceType === "interval"
+                        ? `Every ${habit.recurrenceInterval} days (starts ${habit.recurrenceStartDate})`
+                        : habit.scheduledDays
+                            .map((d) => DAYS.find((day) => day.value === d)?.label)
+                            .join(", ")}
                     </p>
                     {habit.type === "numeric" && (
                       <p className="text-xs font-medium text-emerald-600 dark:text-emerald-400">

@@ -1,21 +1,33 @@
-import { format, getDay } from "date-fns"
+import { format, getDay, parseISO, differenceInCalendarDays } from "date-fns"
 
 import type { Habit, Todo } from "@/types"
+
+function isHabitDueToday(habit: Habit, todayDate: Date): boolean {
+  if (habit.recurrenceType === "interval") {
+    if (!habit.recurrenceStartDate || !habit.recurrenceInterval) return false
+    const start = parseISO(habit.recurrenceStartDate)
+    const diff = differenceInCalendarDays(todayDate, start)
+    return diff >= 0 && diff % habit.recurrenceInterval === 0
+  }
+  // Default: weekdays
+  const dayOfWeek = getDay(todayDate)
+  return habit.scheduledDays.includes(dayOfWeek)
+}
 
 /**
  * Pure function that determines which recurring todos should be created today.
  * Returns an array of new Todo objects ready to be saved.
  *
  * A todo is generated for a habit when:
- *   1. Today's day-of-week (0=Sun..6=Sat) is in the habit's scheduledDays
+ *   1. Today's day-of-week or interval matches
  *   2. No existing todo with that habit's linkedHabitId already exists for today
  */
 export function generateRecurringTodos(
   habits: Habit[],
   existingTodos: Todo[]
 ): Todo[] {
-  const today = format(new Date(), "yyyy-MM-dd")
-  const dayOfWeek = getDay(new Date()) // 0=Sun, 1=Mon, ..., 6=Sat
+  const todayDate = new Date()
+  const today = format(todayDate, "yyyy-MM-dd")
 
   const todaysTodos = existingTodos.filter((todo) => todo.date === today)
   const todaySortOrders = todaysTodos.map((t) => t.sortOrder ?? 0)
@@ -30,7 +42,7 @@ export function generateRecurringTodos(
   const newTodos: Todo[] = []
 
   for (const habit of habits) {
-    if (!habit.scheduledDays.includes(dayOfWeek)) {
+    if (!isHabitDueToday(habit, todayDate)) {
       continue
     }
 

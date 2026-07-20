@@ -17,8 +17,8 @@ export default defineConfig({
         name: "HabDost",
         short_name: "HabDost",
         description: "Local-first tasks + habits",
-        theme_color: "#0f172a",
-        background_color: "#0f172a",
+        theme_color: "#09090b",
+        background_color: "#09090b",
         display: "standalone",
         start_url: "/",
         icons: [

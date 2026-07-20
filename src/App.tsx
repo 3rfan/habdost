@@ -48,7 +48,7 @@ function App() {
 
   return (
     <div className="min-h-dvh bg-background text-foreground">
-      <header className="fixed inset-x-0 top-0 z-10 border-b bg-background/80 backdrop-blur">
+      <header className="fixed inset-x-0 top-0 z-10 border-b bg-background/80 backdrop-blur pt-[env(safe-area-inset-top,0px)]">
         <div className="mx-auto flex h-14 max-w-screen-sm items-center justify-between px-4">
           <h1 className="text-lg font-semibold">HabDost</h1>
           <button
@@ -65,7 +65,7 @@ function App() {
         </div>
       </header>
 
-      <main className="mx-auto min-h-dvh max-w-screen-sm px-4 pb-20 pt-16">
+      <main className="mx-auto min-h-dvh max-w-screen-sm px-4 pb-[calc(5rem+env(safe-area-inset-bottom,0px))] pt-[calc(4rem+env(safe-area-inset-top,0px))]">
         <Routes>
           <Route path="/" element={<MyDay />} />
           <Route path="/calendar" element={<CalendarView />} />
@@ -75,7 +75,7 @@ function App() {
         </Routes>
       </main>
 
-      <nav className="fixed inset-x-0 bottom-0 z-10 border-t bg-background/90 backdrop-blur">
+      <nav className="fixed inset-x-0 bottom-0 z-10 border-t bg-background/90 backdrop-blur pb-[env(safe-area-inset-bottom,0px)]">
         <div className="mx-auto grid h-16 max-w-screen-sm grid-cols-5 px-2">
           <NavLink
             to="/"

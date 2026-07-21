@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useState, useRef } from "react"
 import { format } from "date-fns"
 import {
   DndContext,
@@ -15,10 +15,11 @@ import {
   useSortable,
 } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
-import { Star, GripVertical } from "lucide-react"
+import { Star, GripVertical, Undo2 } from "lucide-react"
 
 import { Checkbox } from "@/components/ui/checkbox"
 import TodoInput from "@/components/TodoInput"
+import SwipeableTodoItem from "@/components/SwipeableTodoItem"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -110,6 +111,7 @@ export default function MyDay() {
   const isLoading = useAppStore((s) => s.isLoading)
   const loadAll = useAppStore((s) => s.loadAll)
   const updateTodo = useAppStore((s) => s.updateTodo)
+  const deleteTodo = useAppStore((s) => s.deleteTodo)
   const reorderTodos = useAppStore((s) => s.reorderTodos)
   const addHabitLog = useAppStore((s) => s.addHabitLog)
   const deleteHabitLog = useAppStore((s) => s.deleteHabitLog)
@@ -121,10 +123,16 @@ export default function MyDay() {
   } | null>(null)
   const [numericInput, setNumericInput] = useState("")
 
+  // Deferred deletion state for undo functionality
+  const [pendingDeleteIds, setPendingDeleteIds] = useState<string[]>([])
+  const undoTimeoutRef = useRef<{ todo: Todo; timeoutId: number } | null>(null)
+  const [undoToastInfo, setUndoToastInfo] = useState<{ id: string; title: string } | null>(null)
+
   const today = useMemo(() => format(new Date(), "yyyy-MM-dd"), [])
+
   const todaysTodos = useMemo(
-    () => todos.filter((todo) => todo.date === today),
-    [todos, today]
+    () => todos.filter((todo) => todo.date === today && !pendingDeleteIds.includes(todo.id)),
+    [todos, today, pendingDeleteIds]
   )
 
   const { starredTodos, unstarredTodos } = useMemo(() => {
@@ -176,6 +184,60 @@ export default function MyDay() {
     })
   )
 
+  const handleInitiateDelete = (todoId: string) => {
+    const todoToDelete = todos.find((t) => t.id === todoId)
+    if (!todoToDelete) return
+
+    // Clear any previous undo toast timeout if one is pending
+    if (undoTimeoutRef.current) {
+      clearTimeout(undoTimeoutRef.current.timeoutId)
+      const prevTodo = undoTimeoutRef.current.todo
+      executeFinalDelete(prevTodo)
+    }
+
+    // Hide item visually by adding to pending list
+    setPendingDeleteIds((prev) => [...prev, todoId])
+    setUndoToastInfo({ id: todoToDelete.id, title: todoToDelete.title })
+
+    // Set 3-second timeout for permanent deletion
+    const timeoutId = window.setTimeout(() => {
+      executeFinalDelete(todoToDelete)
+      setUndoToastInfo(null)
+      undoTimeoutRef.current = null
+    }, 3000)
+
+    undoTimeoutRef.current = { todo: todoToDelete, timeoutId }
+  }
+
+  const executeFinalDelete = async (todo: Todo) => {
+    await deleteTodo(todo.id)
+    setPendingDeleteIds((prev) => prev.filter((id) => id !== todo.id))
+
+    // If deleting a habit-linked task, mark today's log as 'skipped'
+    if (todo.linkedHabitId) {
+      const log: HabitLog = {
+        id: crypto.randomUUID(),
+        habitId: todo.linkedHabitId,
+        date: today,
+        completed: false,
+        status: "skipped",
+        createdAt: new Date().toISOString(),
+      }
+      await addHabitLog(log)
+    }
+  }
+
+  const handleUndoDelete = () => {
+    if (!undoTimeoutRef.current) return
+
+    clearTimeout(undoTimeoutRef.current.timeoutId)
+    const restoredTodo = undoTimeoutRef.current.todo
+
+    setPendingDeleteIds((prev) => prev.filter((id) => id !== restoredTodo.id))
+    setUndoToastInfo(null)
+    undoTimeoutRef.current = null
+  }
+
   const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event
     if (!over || active.id === over.id) return
@@ -184,7 +246,6 @@ export default function MyDay() {
     const overTodo = todaysTodos.find((t) => t.id === over.id)
     if (!activeTodo || !overTodo) return
 
-    // Starred and unstarred groups are sorted independently
     if (activeTodo.starred !== overTodo.starred) return
 
     const isStarred = activeTodo.starred
@@ -213,12 +274,12 @@ export default function MyDay() {
           habitId: todo.linkedHabitId,
           date: today,
           completed: true,
+          status: "completed",
           value: numericValue,
           createdAt: new Date().toISOString(),
         }
         await addHabitLog(log)
       } else {
-        // Remove the habit log for today for this habit
         const existingLog = logs.find(
           (l) => l.habitId === todo.linkedHabitId && l.date === today
         )
@@ -242,7 +303,7 @@ export default function MyDay() {
         unit: habit.unit || "amount",
       })
       setNumericInput("")
-      return // Wait for user to submit the modal
+      return
     }
 
     await performToggle(todo, checked)
@@ -278,7 +339,7 @@ export default function MyDay() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pb-4">
       {numericPrompt && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
           <Card className="w-full max-w-sm">
@@ -344,13 +405,17 @@ export default function MyDay() {
                   >
                     <ul className="space-y-2">
                       {starredTodos.map((todo) => (
-                        <SortableTodoItem
+                        <SwipeableTodoItem
                           key={todo.id}
-                          todo={todo}
-                          handleToggle={handleToggle}
-                          handleStarToggle={handleStarToggle}
-                          habits={habits}
-                        />
+                          onDelete={() => handleInitiateDelete(todo.id)}
+                        >
+                          <SortableTodoItem
+                            todo={todo}
+                            handleToggle={handleToggle}
+                            handleStarToggle={handleStarToggle}
+                            habits={habits}
+                          />
+                        </SwipeableTodoItem>
                       ))}
                     </ul>
                   </SortableContext>
@@ -374,13 +439,17 @@ export default function MyDay() {
                   >
                     <ul className="space-y-2">
                       {unstarredTodos.map((todo) => (
-                        <SortableTodoItem
+                        <SwipeableTodoItem
                           key={todo.id}
-                          todo={todo}
-                          handleToggle={handleToggle}
-                          handleStarToggle={handleStarToggle}
-                          habits={habits}
-                        />
+                          onDelete={() => handleInitiateDelete(todo.id)}
+                        >
+                          <SortableTodoItem
+                            todo={todo}
+                            handleToggle={handleToggle}
+                            handleStarToggle={handleStarToggle}
+                            habits={habits}
+                          />
+                        </SwipeableTodoItem>
                       ))}
                     </ul>
                   </SortableContext>
@@ -390,6 +459,23 @@ export default function MyDay() {
           </DndContext>
         )}
       </section>
+
+      {/* Floating Undo Toast notification */}
+      {undoToastInfo && (
+        <div className="fixed bottom-20 left-1/2 z-50 flex -translate-x-1/2 items-center gap-3 rounded-lg bg-foreground px-4 py-2.5 text-background shadow-lg transition-all animate-in fade-in slide-in-from-bottom-3">
+          <span className="text-xs font-medium truncate max-w-[200px]">
+            Deleted &quot;{undoToastInfo.title}&quot;
+          </span>
+          <button
+            type="button"
+            onClick={handleUndoDelete}
+            className="flex items-center gap-1 text-xs font-semibold text-primary hover:underline"
+          >
+            <Undo2 className="h-3.5 w-3.5" />
+            Undo
+          </button>
+        </div>
+      )}
     </div>
   )
 }

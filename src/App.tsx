@@ -65,7 +65,7 @@ function App() {
         </div>
       </header>
 
-      <main className="mx-auto min-h-dvh max-w-screen-sm px-4 pb-[calc(5rem+env(safe-area-inset-bottom,0px))] pt-[calc(4rem+env(safe-area-inset-top,0px))]">
+      <main className="mx-auto min-h-dvh max-w-screen-sm px-4 pb-[calc(4.25rem+env(safe-area-inset-bottom,0px))] pt-[calc(4rem+env(safe-area-inset-top,0px))]">
         <Routes>
           <Route path="/" element={<MyDay />} />
           <Route path="/calendar" element={<CalendarView />} />
@@ -76,7 +76,7 @@ function App() {
       </main>
 
       <nav className="fixed inset-x-0 bottom-0 z-10 border-t bg-background/90 backdrop-blur pb-[env(safe-area-inset-bottom,0px)]">
-        <div className="mx-auto grid h-16 max-w-screen-sm grid-cols-5 px-2">
+        <div className="mx-auto grid h-14 max-w-screen-sm grid-cols-5 px-2">
           <NavLink
             to="/"
             end

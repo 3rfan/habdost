@@ -64,6 +64,19 @@ export default function CalendarView() {
     [logs, selectedDateStr]
   )
 
+  // Habits that are due on the selected date but have no linked todo saved yet.
+  // These are displayed as virtual "Planned" or "Missed" entries (display-only, not saved to DB).
+  // This fixes the bug where calendar dots appear but the detail panel shows nothing.
+  const selectedScheduledHabits = useMemo(() => {
+    if (!selectedDate || !selectedDateStr) return []
+    const dueHabits = habits.filter((h) => isHabitDueOnDate(h, selectedDate))
+    // Exclude habits that already have a linked todo on this date (they appear in selectedTodos)
+    const linkedHabitIds = new Set(
+      selectedTodos.map((t) => t.linkedHabitId).filter((id): id is string => id != null)
+    )
+    return dueHabits.filter((h) => !linkedHabitIds.has(h.id))
+  }, [selectedDate, selectedDateStr, habits, selectedTodos])
+
   // Build a set of dates that have any completed activity
   const activeDates = useMemo(() => {
     const dates = new Set<string>()
@@ -179,7 +192,7 @@ export default function CalendarView() {
             {format(selectedDate, "EEEE, MMMM d")}
           </h3>
 
-          {selectedTodos.length === 0 && selectedLogs.length === 0 ? (
+          {selectedTodos.length === 0 && selectedLogs.length === 0 && selectedScheduledHabits.length === 0 ? (
             <Card>
               <CardContent className="flex flex-col items-center justify-center py-6 text-center">
                 <CalendarDays className="mb-2 h-6 w-6 text-muted-foreground/50" />
@@ -246,6 +259,41 @@ export default function CalendarView() {
                   </CardContent>
                 </Card>
               ))}
+              {/* Virtual scheduled habit entries — habits due on this date without a saved todo */}
+              {selectedScheduledHabits.map((habit) => {
+                const todayStr = format(new Date(), "yyyy-MM-dd")
+                const isPast = selectedDateStr! < todayStr
+                return (
+                  <Card
+                    key={`scheduled-${habit.id}`}
+                    className={isPast ? "border-amber-500/50 bg-amber-500/5 opacity-75" : "opacity-75"}
+                  >
+                    <CardContent className="py-2.5">
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2 min-w-0">
+                          {isPast ? (
+                            <span className="text-xs text-amber-500 shrink-0 font-semibold">⚠️</span>
+                          ) : (
+                            <span className="text-xs text-blue-500 shrink-0">📅</span>
+                          )}
+                          <p className="text-sm truncate text-muted-foreground">
+                            {habit.emoji && <span className="mr-1.5">{habit.emoji}</span>}
+                            {habit.name}
+                          </p>
+                          <span className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground shrink-0">
+                            habit
+                          </span>
+                        </div>
+                        <span className={`text-[10px] font-semibold uppercase tracking-wider shrink-0 ${
+                          isPast ? "text-amber-500" : "text-blue-500"
+                        }`}>
+                          {isPast ? "Missed" : "Planned"}
+                        </span>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )
+              })}
             </div>
           )}
         </section>

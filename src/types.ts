@@ -39,11 +39,14 @@ export interface HabitLog {
 
 export type GraphType = "mini-heatmap" | "bar-chart"
 export type Timeframe = "1w" | "1m" | "3m" | "1y"
+export type WidgetSize = "medium" | "small"
 
 export interface StatisticsWidget {
   id: Id
   habitId: Id
   graphType: GraphType
   timeframe: Timeframe
+  size?: WidgetSize
   createdAt: string
 }
+

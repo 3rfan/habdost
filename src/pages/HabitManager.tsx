@@ -21,6 +21,18 @@ const DAYS = [
   { label: "Sun", value: 0 },
 ]
 
+const PRESET_COLORS = [
+  { label: "Emerald", hex: "#10b981" },
+  { label: "Purple", hex: "#8b5cf6" },
+  { label: "Indigo", hex: "#6366f1" },
+  { label: "Cyan", hex: "#06b6d4" },
+  { label: "Rose", hex: "#f43f5e" },
+  { label: "Amber", hex: "#f59e0b" },
+  { label: "Red", hex: "#ef4444" },
+  { label: "Teal", hex: "#14b8a6" },
+]
+
+
 export default function HabitManager() {
   const habits = useAppStore((state) => state.habits)
   const addHabit = useAppStore((state) => state.addHabit)
@@ -34,6 +46,7 @@ export default function HabitManager() {
   const [name, setName] = useState("")
   const [tag, setTag] = useState("")
   const [emoji, setEmoji] = useState("")
+  const [color, setColor] = useState("#10b981")
   const [type, setType] = useState<"boolean" | "numeric">("boolean")
   const [unit, setUnit] = useState("")
   const [scheduledDays, setScheduledDays] = useState<number[]>([])
@@ -46,6 +59,7 @@ export default function HabitManager() {
     setName("")
     setTag("")
     setEmoji("")
+    setColor("#10b981")
     setType("boolean")
     setUnit("")
     setScheduledDays([])
@@ -110,6 +124,7 @@ export default function HabitManager() {
       type: type,
       unit: type === "numeric" ? unit.trim() : undefined,
       emoji: emojiSpanned.join("") || undefined,
+      color: color.trim() || "#10b981",
       recurrenceType,
       recurrenceInterval: recurrenceType === "interval" ? recurrenceInterval : undefined,
       recurrenceStartDate: recurrenceType === "interval" ? recurrenceStartDate : undefined,
@@ -245,6 +260,36 @@ export default function HabitManager() {
                     onChange={(e) => setEmoji(e.target.value)}
                     placeholder="e.g. 🙂"
                   />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="habit-color">Habit Color</Label>
+                  <div className="flex flex-wrap items-center gap-2">
+                    {PRESET_COLORS.map((c) => (
+                      <button
+                        key={c.hex}
+                        type="button"
+                        onClick={() => setColor(c.hex)}
+                        className={`h-7 w-7 rounded-full transition-transform ${
+                          color.toLowerCase() === c.hex.toLowerCase()
+                            ? "scale-110 ring-2 ring-primary ring-offset-2 ring-offset-background"
+                            : "hover:scale-105 opacity-80 hover:opacity-100"
+                        }`}
+                        style={{ backgroundColor: c.hex }}
+                        title={c.label}
+                      />
+                    ))}
+                    <div className="relative flex items-center justify-center">
+                      <input
+                        id="habit-color"
+                        type="color"
+                        value={color}
+                        onChange={(e) => setColor(e.target.value)}
+                        className="h-7 w-7 cursor-pointer appearance-none rounded-full border-0 bg-transparent p-0 [&::-webkit-color-swatch-wrapper]:p-0 [&::-webkit-color-swatch]:rounded-full [&::-webkit-color-swatch]:border-0"
+                        title="Custom Color Picker"
+                      />
+                    </div>
+                  </div>
                 </div>
 
                 <div className="space-y-2">
@@ -392,8 +437,12 @@ export default function HabitManager() {
                 <CardContent className="flex items-center justify-between py-3">
                   <div className="space-y-1">
                     <div className="flex items-center gap-2">
-                      <p className="text-sm font-medium">
-                        {habit.emoji && <span className="mr-1.5">{habit.emoji}</span>}
+                      <p className="text-sm font-medium flex items-center gap-1.5">
+                        <span
+                          className="inline-block h-3 w-3 rounded-full shrink-0 border border-black/10 dark:border-white/10 shadow-xs"
+                          style={{ backgroundColor: habit.color || "#10b981" }}
+                        />
+                        {habit.emoji && <span className="mr-0.5">{habit.emoji}</span>}
                         {habit.name}
                       </p>
                       <span className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">

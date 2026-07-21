@@ -32,6 +32,7 @@ export interface HabitLog {
   habitId: Id
   date: string
   completed: boolean
+  status?: "completed" | "skipped"
   value?: number
   createdAt: string
 }

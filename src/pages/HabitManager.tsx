@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useAppStore } from "@/store"
+import { generateRecurringTodos } from "@/scheduler"
 import type { Habit } from "@/types"
 import { Trash2, Plus, Repeat } from "lucide-react"
 
@@ -22,6 +23,7 @@ const DAYS = [
 export default function HabitManager() {
   const habits = useAppStore((state) => state.habits)
   const addHabit = useAppStore((state) => state.addHabit)
+  const addTodo = useAppStore((state) => state.addTodo)
   const deleteHabit = useAppStore((state) => state.deleteHabit)
 
   const [name, setName] = useState("")
@@ -85,6 +87,14 @@ export default function HabitManager() {
     }
 
     await addHabit(habit)
+
+    // Run scheduler for new habit so it appears in My Day immediately if due today
+    const currentTodos = useAppStore.getState().todos
+    const newTodos = generateRecurringTodos([habit], currentTodos)
+    for (const todo of newTodos) {
+      await addTodo(todo)
+    }
+
     setName("")
     setTag("")
     setEmoji("")

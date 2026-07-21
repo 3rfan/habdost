@@ -29,6 +29,12 @@ function App() {
     localStorage.setItem("habdost-theme", next ? "dark" : "light")
   }
 
+  // Enable smooth color transitions after the first paint. We defer this so the
+  // FOCT script's initial .dark class assignment doesn't trigger a visible fade.
+  useEffect(() => {
+    document.documentElement.classList.add("theme-ready")
+  }, [])
+
   useEffect(() => {
     const init = async () => {
       await loadAll()

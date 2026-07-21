@@ -36,7 +36,6 @@ export default function TodoInput() {
   const [showDropdown, setShowDropdown] = useState(false)
   const [cursorPos, setCursorPos] = useState(0)
   const inputRef = useRef<HTMLInputElement>(null)
-  const dateInputRef = useRef<HTMLInputElement>(null)
 
   const today = useMemo(() => format(new Date(), "yyyy-MM-dd"), [])
 
@@ -144,14 +143,6 @@ export default function TodoInput() {
     }
   }
 
-  const openDatePicker = () => {
-    try {
-      dateInputRef.current?.showPicker()
-    } catch {
-      dateInputRef.current?.click()
-    }
-  }
-
   const formattedSelectedDate = selectedDate
     ? format(parseISO(selectedDate), "MMM d")
     : null
@@ -192,36 +183,34 @@ export default function TodoInput() {
       {/* Calendar icon date picker */}
       <div className="relative flex shrink-0 items-center">
         <input
-          ref={dateInputRef}
           type="date"
           value={selectedDate}
           onChange={(e) => setSelectedDate(e.target.value)}
-          tabIndex={-1}
-          aria-hidden="true"
-          className="absolute opacity-0 w-px h-px overflow-hidden pointer-events-none"
-          style={{ position: "absolute", pointerEvents: "none" }}
+          aria-label="Pick date"
+          className="absolute inset-0 z-10 w-full h-full opacity-0 cursor-pointer appearance-none [webkit-appearance:none] [webkit-tap-highlight-color:transparent]"
         />
-        <button
-          type="button"
-          onClick={openDatePicker}
-          title={selectedDate ? `Date: ${formattedSelectedDate}` : "Pick a date"}
+        <div
           className={`flex h-10 items-center gap-1.5 rounded-md border px-2.5 text-sm transition-colors ${
             selectedDate
               ? "border-primary bg-primary/10 text-primary"
-              : "border-input bg-background text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+              : "border-input bg-background text-muted-foreground"
           }`}
         >
           <CalendarDays className="h-4 w-4 shrink-0" />
           {formattedSelectedDate && (
             <span className="text-xs font-medium">{formattedSelectedDate}</span>
           )}
-        </button>
+        </div>
         {selectedDate && (
           <button
             type="button"
-            onClick={() => setSelectedDate("")}
+            onClick={(e) => {
+              e.stopPropagation()
+              e.preventDefault()
+              setSelectedDate("")
+            }}
             title="Clear date"
-            className="absolute -right-1.5 -top-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-muted text-muted-foreground hover:bg-destructive hover:text-destructive-foreground transition-colors"
+            className="absolute -right-1.5 -top-1.5 z-20 flex h-4 w-4 items-center justify-center rounded-full bg-muted text-muted-foreground hover:bg-destructive hover:text-destructive-foreground transition-colors"
           >
             <X className="h-2.5 w-2.5" />
           </button>

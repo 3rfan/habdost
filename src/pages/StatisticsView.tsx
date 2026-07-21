@@ -11,7 +11,8 @@ import { Flame, Plus, Trash2, Pencil } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { useAppStore } from "@/store"
-import type { Timeframe, GraphType, StatisticsWidget, Habit } from "@/types"
+import type { Timeframe, GraphType, StatisticsWidget, Habit, WidgetSize } from "@/types"
+
 
 const WEEKDAY_LABELS = ["", "Mon", "", "Wed", "", "Fri", ""]
 
@@ -287,7 +288,7 @@ export default function StatisticsView() {
       )}
 
       {/* WIDGETS GRID */}
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="grid grid-cols-2 gap-2.5 sm:gap-3 md:gap-4">
         {widgets.map((widget) => (
           <WidgetRenderer
             key={widget.id}
@@ -343,9 +344,11 @@ function WidgetRenderer({
 
   if (!habit) return null
 
+  const isSmall = widget.size === "small"
+
   return (
-    <Card className="relative overflow-hidden">
-      <div className="absolute right-2 top-2 flex gap-1">
+    <Card className={`relative overflow-hidden ${isSmall ? "col-span-1" : "col-span-2"}`}>
+      <div className="absolute right-1.5 top-1.5 flex gap-1 z-10 sm:right-2 sm:top-2">
         <Button
           variant="ghost"
           size="icon"
@@ -363,21 +366,28 @@ function WidgetRenderer({
           <Trash2 className="h-3 w-3" />
         </Button>
       </div>
-      <CardHeader className="pb-2 pt-4">
-        <CardTitle className="text-sm">
-          {habit.emoji && <span className="mr-1.5">{habit.emoji}</span>}
-          #{habit.tag}
+      <CardHeader className={isSmall ? "p-2.5 pb-1 sm:p-4 sm:pb-2" : "pb-2 pt-4"}>
+        <CardTitle className="text-xs sm:text-sm flex items-center justify-between pr-12 sm:pr-14">
+          <span className="truncate">
+            {habit.emoji && <span className="mr-1 sm:mr-1.5">{habit.emoji}</span>}
+            #{habit.tag}
+          </span>
+          {isSmall && (
+            <span className="text-[9px] sm:text-[10px] font-normal uppercase tracking-wider text-muted-foreground border rounded px-1 py-0.5 shrink-0 ml-1">
+              Small
+            </span>
+          )}
         </CardTitle>
-        <p className="text-xs text-muted-foreground capitalize">
+        <p className="text-[10px] sm:text-xs text-muted-foreground capitalize truncate">
           {widget.graphType.replace("-", " ")} • {TIMEFRAMES.find((t) => t.value === widget.timeframe)?.label}
         </p>
       </CardHeader>
-      <CardContent>
+      <CardContent className={isSmall ? "p-2.5 pt-0 sm:p-4 sm:pt-0" : ""}>
         {widget.graphType === "mini-heatmap" && (
-          <MiniHeatmapRenderer dateCountMap={dateCountMap} maxCount={maxCount} weeksCount={weeksCount} today={today} />
+          <MiniHeatmapRenderer dateCountMap={dateCountMap} maxCount={maxCount} weeksCount={weeksCount} today={today} size={widget.size ?? "medium"} />
         )}
         {widget.graphType === "bar-chart" && (
-          <BarChartRenderer dateCountMap={dateCountMap} maxCount={maxCount} weeksCount={weeksCount} today={today} unit={habit.unit} />
+          <BarChartRenderer dateCountMap={dateCountMap} maxCount={maxCount} weeksCount={weeksCount} today={today} unit={habit.unit} size={widget.size ?? "medium"} />
         )}
       </CardContent>
     </Card>
@@ -390,9 +400,10 @@ interface ChartProps {
   weeksCount: number
   today: Date
   unit?: string
+  size?: WidgetSize
 }
 
-function MiniHeatmapRenderer({ dateCountMap, maxCount, weeksCount, today }: ChartProps) {
+function MiniHeatmapRenderer({ dateCountMap, maxCount, weeksCount, today, size = "medium" }: ChartProps) {
   const { weeks } = useMemo(() => {
     const start = startOfWeek(subDays(today, weeksCount * 7 - 1))
     const allDays = eachDayOfInterval({ start, end: today })
@@ -445,10 +456,11 @@ function MiniHeatmapRenderer({ dateCountMap, maxCount, weeksCount, today }: Char
   }
 
   // 1 Month & 3 Months Layout (Dynamic CSS Grid of Circles)
+  const containerHeight = size === "small" ? "h-28 sm:h-32" : "h-36 sm:h-40"
   return (
-    <div className="h-40 w-full pb-2 pt-4">
+    <div className={`${containerHeight} w-full pb-1 pt-2 sm:pb-2 sm:pt-4 flex flex-col justify-between`}>
       <div
-        className="grid h-full w-full gap-1"
+        className="grid h-full w-full gap-[1px] sm:gap-1"
         style={{
           gridTemplateRows: `repeat(7, minmax(0, 1fr))`,
           gridAutoColumns: `minmax(0, 1fr)`,
@@ -470,11 +482,14 @@ function MiniHeatmapRenderer({ dateCountMap, maxCount, weeksCount, today }: Char
           ))
         )}
       </div>
+      {size === "small" && weeksCount === 52 && (
+        <p className="text-[8px] sm:text-[9px] text-muted-foreground text-center mt-0.5 truncate">Last 3 months</p>
+      )}
     </div>
   )
 }
 
-function BarChartRenderer({ dateCountMap, maxCount, weeksCount, today, unit }: ChartProps) {
+function BarChartRenderer({ dateCountMap, maxCount, weeksCount, today, unit, size = "medium" }: ChartProps) {
   const bars = useMemo(() => {
     const days = weeksCount * 7
     const start = subDays(today, days - 1)
@@ -493,10 +508,13 @@ function BarChartRenderer({ dateCountMap, maxCount, weeksCount, today, unit }: C
     })
   }, [dateCountMap, maxCount, weeksCount, today])
 
+  const containerHeight = size === "small" ? "h-32 sm:h-36" : "h-36 sm:h-40"
+  const barMinWidth = size === "small" ? "min-w-[14px] sm:min-w-[20px]" : "min-w-[28px]"
+
   return (
-    <div className="flex h-40 items-end gap-1 overflow-x-auto pb-2 pt-8">
+    <div className={`flex ${containerHeight} items-end gap-1 overflow-x-auto pb-2 pt-6`}>
       {bars.map((b, i) => (
-        <div key={i} className="group relative flex h-full flex-1 min-w-[28px] flex-col items-center justify-end">
+        <div key={i} className={`group relative flex h-full flex-1 ${barMinWidth} flex-col items-center justify-end`}>
           <div className="absolute -top-8 hidden whitespace-nowrap rounded-md border bg-popover px-2 py-1 text-[10px] font-medium text-popover-foreground shadow-sm group-hover:block z-10">
             {b.val} {unit}
           </div>

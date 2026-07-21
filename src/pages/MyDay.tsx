@@ -34,11 +34,15 @@ function SortableTodoItem({
   handleToggle,
   handleStarToggle,
   habits,
+  onDelete,
+  disabledSwipe,
 }: {
   todo: Todo
   handleToggle: (todoId: string, checked: boolean) => Promise<void>
   handleStarToggle: (todoId: string) => Promise<void>
   habits: Habit[]
+  onDelete: () => void
+  disabledSwipe?: boolean
 }) {
   const {
     attributes,
@@ -58,51 +62,51 @@ function SortableTodoItem({
   const habit = todo.linkedHabitId ? habits.find((h) => h.id === todo.linkedHabitId) : undefined
 
   return (
-    <li
-      ref={setNodeRef}
-      style={style}
-      className="flex items-center gap-3 rounded-md border bg-card p-3 shadow-sm select-none touch-pan-y"
-    >
-      <button
-        type="button"
-        className="cursor-grab p-1 text-muted-foreground hover:text-foreground active:cursor-grabbing touch-none select-none"
-        {...attributes}
-        {...listeners}
-      >
-        <GripVertical className="h-4 w-4" />
-      </button>
-      <Checkbox
-        checked={todo.completed}
-        onCheckedChange={async (checked) => {
-          await handleToggle(todo.id, checked === true)
-        }}
-      />
-      <div className="flex-1 min-w-0 space-y-1">
-        <p
-          className={
-            todo.completed
-              ? "text-sm text-muted-foreground line-through truncate"
-              : "text-sm text-card-foreground truncate"
-          }
-        >
-          {habit?.emoji && <span className="mr-1.5">{habit.emoji}</span>}
-          {todo.title}
-        </p>
-        {todo.linkedHabitId ? (
-          <p className="text-xs text-muted-foreground">Linked to habit</p>
-        ) : null}
-      </div>
-      <button
-        type="button"
-        onClick={() => handleStarToggle(todo.id)}
-        className={`p-1 transition-colors ${
-          todo.starred
-            ? "text-yellow-500 hover:text-yellow-600"
-            : "text-muted-foreground hover:text-foreground"
-        }`}
-      >
-        <Star className="h-4 w-4" fill={todo.starred ? "currentColor" : "none"} />
-      </button>
+    <li ref={setNodeRef} style={style}>
+      <SwipeableTodoItem onDelete={onDelete} disabled={disabledSwipe}>
+        <div className="flex items-center gap-3 rounded-md border bg-card p-3 shadow-sm select-none touch-pan-y">
+          <button
+            type="button"
+            className="cursor-grab p-1 text-muted-foreground hover:text-foreground active:cursor-grabbing touch-none select-none"
+            {...attributes}
+            {...listeners}
+          >
+            <GripVertical className="h-4 w-4" />
+          </button>
+          <Checkbox
+            checked={todo.completed}
+            onCheckedChange={async (checked) => {
+              await handleToggle(todo.id, checked === true)
+            }}
+          />
+          <div className="flex-1 min-w-0 space-y-1">
+            <p
+              className={
+                todo.completed
+                  ? "text-sm text-muted-foreground line-through truncate"
+                  : "text-sm text-card-foreground truncate"
+              }
+            >
+              {habit?.emoji && <span className="mr-1.5">{habit.emoji}</span>}
+              {todo.title}
+            </p>
+            {todo.linkedHabitId ? (
+              <p className="text-xs text-muted-foreground">Linked to habit</p>
+            ) : null}
+          </div>
+          <button
+            type="button"
+            onClick={() => handleStarToggle(todo.id)}
+            className={`p-1 transition-colors ${
+              todo.starred
+                ? "text-yellow-500 hover:text-yellow-600"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <Star className="h-4 w-4" fill={todo.starred ? "currentColor" : "none"} />
+          </button>
+        </div>
+      </SwipeableTodoItem>
     </li>
   )
 }
@@ -422,17 +426,15 @@ export default function MyDay() {
                   >
                     <ul className="space-y-2">
                       {starredTodos.map((todo) => (
-                        <SwipeableTodoItem
+                        <SortableTodoItem
                           key={todo.id}
+                          todo={todo}
+                          handleToggle={handleToggle}
+                          handleStarToggle={handleStarToggle}
+                          habits={habits}
                           onDelete={() => setTodoToDeleteConfirm(todo)}
-                        >
-                          <SortableTodoItem
-                            todo={todo}
-                            handleToggle={handleToggle}
-                            handleStarToggle={handleStarToggle}
-                            habits={habits}
-                          />
-                        </SwipeableTodoItem>
+                          disabledSwipe={activeId !== null}
+                        />
                       ))}
                     </ul>
                   </SortableContext>
@@ -456,17 +458,15 @@ export default function MyDay() {
                   >
                     <ul className="space-y-2">
                       {unstarredTodos.map((todo) => (
-                        <SwipeableTodoItem
+                        <SortableTodoItem
                           key={todo.id}
+                          todo={todo}
+                          handleToggle={handleToggle}
+                          handleStarToggle={handleStarToggle}
+                          habits={habits}
                           onDelete={() => setTodoToDeleteConfirm(todo)}
-                        >
-                          <SortableTodoItem
-                            todo={todo}
-                            handleToggle={handleToggle}
-                            handleStarToggle={handleStarToggle}
-                            habits={habits}
-                          />
-                        </SwipeableTodoItem>
+                          disabledSwipe={activeId !== null}
+                        />
                       ))}
                     </ul>
                   </SortableContext>

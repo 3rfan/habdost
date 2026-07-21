@@ -51,6 +51,7 @@ export default function StatisticsView() {
 
   const [widgetToDelete, setWidgetToDelete] = useState<StatisticsWidget | null>(null)
 
+
   // MAIN HEATMAP DATA
   const { dateCountMap, maxCount } = useMemo(() => {
     const map = new Map<string, number>()

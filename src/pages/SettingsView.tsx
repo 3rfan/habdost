@@ -198,7 +198,7 @@ export default function SettingsView() {
         <CardContent className="flex items-center gap-3 py-4">
           <Settings className="h-5 w-5 text-muted-foreground" />
           <div>
-            <p className="text-sm font-medium">HabDost v2.21</p>
+            <p className="text-sm font-medium">HabDost v2.30</p>
             <p className="text-xs text-muted-foreground">
               Local-first habit tracker. All data stored on your device.
             </p>

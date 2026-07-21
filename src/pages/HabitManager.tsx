@@ -5,19 +5,20 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Select } from "@/components/ui/select"
 import { useAppStore } from "@/store"
 import { generateRecurringTodos } from "@/scheduler"
 import type { Habit } from "@/types"
 import { Trash2, Plus, Repeat, ChevronDown, ChevronUp } from "lucide-react"
 
 const DAYS = [
-  { label: "Sun", value: 0 },
   { label: "Mon", value: 1 },
   { label: "Tue", value: 2 },
   { label: "Wed", value: 3 },
   { label: "Thu", value: 4 },
   { label: "Fri", value: 5 },
   { label: "Sat", value: 6 },
+  { label: "Sun", value: 0 },
 ]
 
 export default function HabitManager() {
@@ -60,7 +61,6 @@ export default function HabitManager() {
   }
 
   const handleCancelClick = () => {
-    // If user typed anything into name or tag, confirm before discarding draft
     if (name.trim() || tag.trim() || emoji.trim() || scheduledDays.length > 0) {
       setShowCancelModal(true)
     } else {
@@ -120,7 +120,6 @@ export default function HabitManager() {
 
     await addHabit(habit)
 
-    // Run scheduler for new habit so it appears in My Day immediately if due today
     const currentTodos = useAppStore.getState().todos
     const newTodos = generateRecurringTodos([habit], currentTodos)
     for (const todo of newTodos) {
@@ -128,7 +127,7 @@ export default function HabitManager() {
     }
 
     resetForm()
-    setIsFormOpen(false) // Auto-collapse form after creation
+    setIsFormOpen(false)
   }
 
   return (
@@ -191,7 +190,7 @@ export default function HabitManager() {
       <Card>
         <CardHeader
           onClick={() => setIsFormOpen((prev) => !prev)}
-          className="cursor-pointer select-none transition-colors hover:bg-accent/50 rounded-t-lg"
+          className="cursor-pointer select-none transition-colors hover:bg-accent/50 rounded-lg p-4"
         >
           <div className="flex items-center justify-between">
             <CardTitle className="flex items-center gap-2 text-base">
@@ -249,29 +248,15 @@ export default function HabitManager() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Tracking Type</Label>
-                  <div className="flex gap-4">
-                    <label className="flex items-center gap-2 text-sm">
-                      <input
-                        type="radio"
-                        name="habit-type"
-                        value="boolean"
-                        checked={type === "boolean"}
-                        onChange={() => setType("boolean")}
-                      />
-                      Yes / No
-                    </label>
-                    <label className="flex items-center gap-2 text-sm">
-                      <input
-                        type="radio"
-                        name="habit-type"
-                        value="numeric"
-                        checked={type === "numeric"}
-                        onChange={() => setType("numeric")}
-                      />
-                      Numeric
-                    </label>
-                  </div>
+                  <Label htmlFor="tracking-type-select">Tracking Type</Label>
+                  <Select
+                    id="tracking-type-select"
+                    value={type}
+                    onChange={(e) => setType(e.target.value as "boolean" | "numeric")}
+                  >
+                    <option value="boolean">Yes / No (Boolean)</option>
+                    <option value="numeric">Numeric (Amount)</option>
+                  </Select>
                 </div>
 
                 {type === "numeric" && (
@@ -287,46 +272,22 @@ export default function HabitManager() {
                 )}
 
                 <div className="space-y-2">
-                  <Label>Schedule</Label>
-                  <div className="flex flex-col gap-2">
-                    <label className="flex items-center gap-2 text-sm cursor-pointer">
-                      <input
-                        type="radio"
-                        name="recurrence-type"
-                        value="weekdays"
-                        checked={recurrenceType === "weekdays"}
-                        onChange={() => setRecurrenceType("weekdays")}
-                      />
-                      Specific Weekdays
-                    </label>
-                    <label className="flex items-center gap-2 text-sm cursor-pointer">
-                      <input
-                        type="radio"
-                        name="recurrence-type"
-                        value="interval"
-                        checked={recurrenceType === "interval"}
-                        onChange={() => setRecurrenceType("interval")}
-                      />
-                      Every N Days
-                    </label>
-                    <label className="flex items-center gap-2 text-sm cursor-pointer">
-                      <input
-                        type="radio"
-                        name="recurrence-type"
-                        value="none"
-                        checked={recurrenceType === "none"}
-                        onChange={() => setRecurrenceType("none")}
-                      />
-                      No Fixed Schedule
-                      <span className="text-xs text-muted-foreground">(add via #tag in My Day)</span>
-                    </label>
-                  </div>
+                  <Label htmlFor="schedule-select">Schedule</Label>
+                  <Select
+                    id="schedule-select"
+                    value={recurrenceType}
+                    onChange={(e) => setRecurrenceType(e.target.value as "weekdays" | "interval" | "none")}
+                  >
+                    <option value="weekdays">Specific Weekdays</option>
+                    <option value="interval">Every N Days</option>
+                    <option value="none">No Fixed Schedule (#tag in My Day)</option>
+                  </Select>
                 </div>
 
                 {recurrenceType === "weekdays" && (
                   <div className="space-y-2">
                     <Label>Repeat on</Label>
-                    <div className="flex flex-wrap gap-2">
+                    <div className="grid grid-cols-7 gap-1">
                       {DAYS.map((day) => {
                         const isSelected = scheduledDays.includes(day.value)
                         return (
@@ -334,7 +295,7 @@ export default function HabitManager() {
                             key={day.value}
                             type="button"
                             onClick={() => toggleDay(day.value)}
-                            className={`flex h-9 w-11 items-center justify-center rounded-md border text-xs font-medium transition-colors ${
+                            className={`flex h-9 w-full items-center justify-center rounded-md border text-xs font-medium transition-colors ${
                               isSelected
                                 ? "border-primary bg-primary text-primary-foreground"
                                 : "border-input bg-background text-muted-foreground hover:bg-accent hover:text-accent-foreground"

@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label"
 import { useAppStore } from "@/store"
 import { generateRecurringTodos } from "@/scheduler"
 import type { Habit } from "@/types"
-import { Trash2, Plus, Repeat } from "lucide-react"
+import { Trash2, Plus, Repeat, ChevronDown, ChevronUp } from "lucide-react"
 
 const DAYS = [
   { label: "Sun", value: 0 },
@@ -26,6 +26,9 @@ export default function HabitManager() {
   const addTodo = useAppStore((state) => state.addTodo)
   const deleteHabit = useAppStore((state) => state.deleteHabit)
 
+  const [isFormOpen, setIsFormOpen] = useState(false)
+  const [showCancelModal, setShowCancelModal] = useState(false)
+
   const [name, setName] = useState("")
   const [tag, setTag] = useState("")
   const [emoji, setEmoji] = useState("")
@@ -37,10 +40,38 @@ export default function HabitManager() {
   const [recurrenceInterval, setRecurrenceInterval] = useState(1)
   const [recurrenceStartDate, setRecurrenceStartDate] = useState(() => format(new Date(), "yyyy-MM-dd"))
 
+  const resetForm = () => {
+    setName("")
+    setTag("")
+    setEmoji("")
+    setType("boolean")
+    setUnit("")
+    setScheduledDays([])
+    setRecurrenceType("weekdays")
+    setRecurrenceInterval(1)
+    setRecurrenceStartDate(format(new Date(), "yyyy-MM-dd"))
+  }
+
   const toggleDay = (day: number) => {
     setScheduledDays((prev) =>
       prev.includes(day) ? prev.filter((d) => d !== day) : [...prev, day]
     )
+  }
+
+  const handleCancelClick = () => {
+    // If user typed anything into name or tag, confirm before discarding draft
+    if (name.trim() || tag.trim() || emoji.trim() || scheduledDays.length > 0) {
+      setShowCancelModal(true)
+    } else {
+      resetForm()
+      setIsFormOpen(false)
+    }
+  }
+
+  const confirmCancel = () => {
+    resetForm()
+    setShowCancelModal(false)
+    setIsFormOpen(false)
   }
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -95,15 +126,8 @@ export default function HabitManager() {
       await addTodo(todo)
     }
 
-    setName("")
-    setTag("")
-    setEmoji("")
-    setType("boolean")
-    setUnit("")
-    setScheduledDays([])
-    setRecurrenceType("weekdays")
-    setRecurrenceInterval(1)
-    setRecurrenceStartDate(format(new Date(), "yyyy-MM-dd"))
+    resetForm()
+    setIsFormOpen(false) // Auto-collapse form after creation
   }
 
   const handleDelete = async (id: string) => {
@@ -112,15 +136,55 @@ export default function HabitManager() {
 
   return (
     <div className="space-y-6">
-      {/* Create Habit Form */}
+      {/* Cancel Confirmation Modal */}
+      {showCancelModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <Card className="w-full max-w-sm">
+            <CardHeader>
+              <CardTitle className="text-lg">Discard New Habit?</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                Are you sure you want to cancel? Any unsaved habit details will be discarded.
+              </p>
+              <div className="flex justify-end gap-2">
+                <Button variant="ghost" onClick={() => setShowCancelModal(false)}>
+                  Keep Editing
+                </Button>
+                <Button variant="destructive" onClick={confirmCancel}>
+                  Discard Habit
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Collapsible Create Habit Card */}
       <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-base">
-            <Plus className="h-4 w-4" />
-            New Habit
-          </CardTitle>
+        <CardHeader
+          onClick={() => setIsFormOpen((prev) => !prev)}
+          className="cursor-pointer select-none transition-colors hover:bg-accent/50 rounded-t-lg"
+        >
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Plus className="h-4 w-4" />
+              New Habit
+            </CardTitle>
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-muted-foreground font-normal">
+                {isFormOpen ? "Tap to collapse" : "Tap to expand"}
+              </span>
+              {isFormOpen ? (
+                <ChevronUp className="h-4 w-4 text-muted-foreground" />
+              ) : (
+                <ChevronDown className="h-4 w-4 text-muted-foreground" />
+              )}
+            </div>
+          </div>
         </CardHeader>
-        <CardContent>
+        {isFormOpen && (
+          <CardContent className="pt-2">
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="habit-name">Habit Name</Label>
@@ -286,20 +350,31 @@ export default function HabitManager() {
               </div>
             )}
 
-            <Button
-              type="submit"
-              className="w-full"
-              disabled={
-                !name.trim() ||
-                !tag.trim() ||
-                (recurrenceType === "weekdays" && scheduledDays.length === 0) ||
-                (recurrenceType === "interval" && (!recurrenceInterval || recurrenceInterval < 1))
-              }
-            >
-              Create Habit
-            </Button>
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleCancelClick}
+                className="flex-1"
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                className="flex-1"
+                disabled={
+                  !name.trim() ||
+                  !tag.trim() ||
+                  (recurrenceType === "weekdays" && scheduledDays.length === 0) ||
+                  (recurrenceType === "interval" && (!recurrenceInterval || recurrenceInterval < 1))
+                }
+              >
+                Create Habit
+              </Button>
+            </div>
           </form>
         </CardContent>
+        )}
       </Card>
 
       {/* Habit List */}

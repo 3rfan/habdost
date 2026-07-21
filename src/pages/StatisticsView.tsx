@@ -11,7 +11,7 @@ import { Flame, Plus, Trash2, Pencil } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { useAppStore } from "@/store"
-import type { Timeframe, GraphType, StatisticsWidget, Habit } from "@/types"
+import type { Timeframe, GraphType, StatisticsWidget, Habit, WidgetSize } from "@/types"
 
 const WEEKDAY_LABELS = ["", "Mon", "", "Wed", "", "Fri", ""]
 
@@ -72,6 +72,7 @@ export default function StatisticsView() {
   const [newWidgetHabit, setNewWidgetHabit] = useState<string>("")
   const [newWidgetType, setNewWidgetType] = useState<GraphType>("mini-heatmap")
   const [newWidgetTimeframe, setNewWidgetTimeframe] = useState<Timeframe>("1m")
+  const [newWidgetSize, setNewWidgetSize] = useState<WidgetSize>("medium")
 
   const [widgetToDelete, setWidgetToDelete] = useState<StatisticsWidget | null>(null)
 
@@ -132,6 +133,7 @@ export default function StatisticsView() {
         habitId: newWidgetHabit,
         graphType: newWidgetType,
         timeframe: newWidgetTimeframe,
+        size: newWidgetSize,
       })
     } else {
       await addWidget({
@@ -139,6 +141,7 @@ export default function StatisticsView() {
         habitId: newWidgetHabit,
         graphType: newWidgetType,
         timeframe: newWidgetTimeframe,
+        size: newWidgetSize,
         createdAt: new Date().toISOString()
       })
     }
@@ -253,7 +256,7 @@ export default function StatisticsView() {
       {/* DASHBOARD WIDGETS HEADER */}
       <div className="flex items-center justify-between pt-4">
         <h2 className="text-lg font-semibold">Custom Dashboard</h2>
-        <Button size="sm" variant="outline" onClick={() => { setEditingWidget(null); setNewWidgetHabit(""); setNewWidgetType("mini-heatmap"); setNewWidgetTimeframe("1m"); setShowAddModal(true); }}>
+        <Button size="sm" variant="outline" onClick={() => { setEditingWidget(null); setNewWidgetHabit(""); setNewWidgetType("mini-heatmap"); setNewWidgetTimeframe("1m"); setNewWidgetSize("medium"); setShowAddModal(true); }}>
           <Plus className="mr-1 h-4 w-4" /> Add Graph
         </Button>
       </div>
@@ -283,6 +286,13 @@ export default function StatisticsView() {
               <label className="text-xs">Timeframe</label>
               <select className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm" value={newWidgetTimeframe} onChange={(e) => setNewWidgetTimeframe(e.target.value as Timeframe)}>
                 {TIMEFRAMES.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
+              </select>
+            </div>
+            <div className="grid gap-2">
+              <label className="text-xs">Widget Size</label>
+              <select className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm" value={newWidgetSize} onChange={(e) => setNewWidgetSize(e.target.value as WidgetSize)}>
+                <option value="medium">Medium (Full Row)</option>
+                <option value="small">Small (Half Row)</option>
               </select>
             </div>
             <div className="flex justify-end gap-2 pt-2">
@@ -326,7 +336,7 @@ export default function StatisticsView() {
       )}
 
       {/* WIDGETS GRID */}
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         {widgets.map((widget) => (
           <WidgetRenderer
             key={widget.id}
@@ -337,6 +347,7 @@ export default function StatisticsView() {
               setNewWidgetHabit(widget.habitId)
               setNewWidgetType(widget.graphType)
               setNewWidgetTimeframe(widget.timeframe)
+              setNewWidgetSize(widget.size ?? "medium")
               setShowAddModal(true)
             }}
             onDelete={() => setWidgetToDelete(widget)}
@@ -382,9 +393,11 @@ function WidgetRenderer({
 
   if (!habit) return null
 
+  const isSmall = widget.size === "small"
+
   return (
-    <Card className="relative overflow-hidden">
-      <div className="absolute right-2 top-2 flex gap-1">
+    <Card className={`relative overflow-hidden ${isSmall ? "md:col-span-1" : "md:col-span-2"}`}>
+      <div className="absolute right-2 top-2 flex gap-1 z-10">
         <Button
           variant="ghost"
           size="icon"
@@ -403,15 +416,20 @@ function WidgetRenderer({
         </Button>
       </div>
       <CardHeader className="pb-2 pt-4">
-        <CardTitle className="text-sm flex items-center gap-2">
-          <span
-            className="inline-block h-3 w-3 rounded-full shrink-0 border border-black/10 dark:border-white/10 shadow-xs"
-            style={{ backgroundColor: habit.color || "#10b981" }}
-          />
-          <span>
-            {habit.emoji && <span className="mr-1.5">{habit.emoji}</span>}
+        <CardTitle className="text-sm flex items-center justify-between pr-14">
+          <span className="flex items-center gap-1.5 truncate">
+            <span
+              className="inline-block h-3 w-3 rounded-full shrink-0 border border-black/10 dark:border-white/10 shadow-xs"
+              style={{ backgroundColor: habit.color || "#10b981" }}
+            />
+            {habit.emoji && <span className="mr-0.5">{habit.emoji}</span>}
             #{habit.tag}
           </span>
+          {isSmall && (
+            <span className="text-[10px] font-normal uppercase tracking-wider text-muted-foreground border rounded px-1.5 py-0.5 shrink-0 ml-1">
+              Small
+            </span>
+          )}
         </CardTitle>
         <p className="text-xs text-muted-foreground capitalize">
           {widget.graphType.replace("-", " ")} • {TIMEFRAMES.find((t) => t.value === widget.timeframe)?.label}
@@ -419,10 +437,10 @@ function WidgetRenderer({
       </CardHeader>
       <CardContent>
         {widget.graphType === "mini-heatmap" && (
-          <MiniHeatmapRenderer dateCountMap={dateCountMap} maxCount={maxCount} weeksCount={weeksCount} today={today} color={habit.color} />
+          <MiniHeatmapRenderer dateCountMap={dateCountMap} maxCount={maxCount} weeksCount={weeksCount} today={today} size={widget.size ?? "medium"} color={habit.color} />
         )}
         {widget.graphType === "bar-chart" && (
-          <BarChartRenderer dateCountMap={dateCountMap} maxCount={maxCount} weeksCount={weeksCount} today={today} unit={habit.unit} color={habit.color} />
+          <BarChartRenderer dateCountMap={dateCountMap} maxCount={maxCount} weeksCount={weeksCount} today={today} unit={habit.unit} size={widget.size ?? "medium"} color={habit.color} />
         )}
       </CardContent>
     </Card>
@@ -435,12 +453,15 @@ interface ChartProps {
   weeksCount: number
   today: Date
   unit?: string
+  size?: WidgetSize
   color?: string
 }
 
-function MiniHeatmapRenderer({ dateCountMap, maxCount, weeksCount, today, color }: ChartProps) {
+function MiniHeatmapRenderer({ dateCountMap, maxCount, weeksCount, today, size = "medium", color }: ChartProps) {
+  // If small size and 1y (52 weeks), cap to 13 weeks (3 months) for readability
+  const effectiveWeeksCount = (size === "small" && weeksCount === 52) ? 13 : weeksCount
   const { weeks } = useMemo(() => {
-    const start = startOfWeek(subDays(today, weeksCount * 7 - 1))
+    const start = startOfWeek(subDays(today, effectiveWeeksCount * 7 - 1))
     const allDays = eachDayOfInterval({ start, end: today })
     const cols: string[][] = []
     let cur: string[] = []
@@ -453,10 +474,10 @@ function MiniHeatmapRenderer({ dateCountMap, maxCount, weeksCount, today, color 
       cols.push(cur)
     }
     return { weeks: cols }
-  }, [weeksCount, today])
+  }, [effectiveWeeksCount, today])
 
-  // 1 Year Layout (Original compact scrollable heatmap)
-  if (weeksCount === 52) {
+  // 1 Year Layout (Original compact scrollable heatmap for medium size)
+  if (effectiveWeeksCount === 52) {
     return (
       <div className="flex gap-[2px] overflow-x-auto pb-2 pt-4">
         {weeks.map((week: string[], wi: number) => (
@@ -473,15 +494,17 @@ function MiniHeatmapRenderer({ dateCountMap, maxCount, weeksCount, today, color 
   }
 
   // 1 Week Layout (7 circles on a single line)
-  if (weeksCount === 1) {
+  if (effectiveWeeksCount === 1) {
     const days = weeks.flat().filter(d => d !== "")
+    const circleSize = size === "small" ? "h-7 w-7" : "h-10 w-10"
+    const containerHeight = size === "small" ? "h-24" : "h-32"
     return (
-      <div className="flex h-32 w-full items-center justify-around pb-2 pt-4">
+      <div className={`flex ${containerHeight} w-full items-center justify-around pb-2 pt-4`}>
         {days.map((d, di) => (
-          <div key={di} className="flex flex-col items-center gap-2">
+          <div key={di} className="flex flex-col items-center gap-1.5">
             <div
               title={`${d}: ${dateCountMap.get(d) ?? 0}`}
-              className={`h-10 w-10 rounded-full transition-colors ${getIntensityClass(dateCountMap.get(d) ?? 0, maxCount)}`}
+              className={`${circleSize} rounded-full transition-colors ${getIntensityClass(dateCountMap.get(d) ?? 0, maxCount)}`}
             />
             <span className="text-[10px] text-muted-foreground">{format(new Date(d + "T00:00:00"), "EEE")}</span>
           </div>
@@ -491,8 +514,9 @@ function MiniHeatmapRenderer({ dateCountMap, maxCount, weeksCount, today, color 
   }
 
   // 1 Month & 3 Months Layout (Dynamic CSS Grid of Circles)
+  const containerHeight = size === "small" ? "h-32" : "h-40"
   return (
-    <div className="h-40 w-full pb-2 pt-4">
+    <div className={`${containerHeight} w-full pb-2 pt-4 flex flex-col justify-between`}>
       <div
         className="grid h-full w-full gap-1"
         style={{
@@ -521,11 +545,14 @@ function MiniHeatmapRenderer({ dateCountMap, maxCount, weeksCount, today, color 
           })
         )}
       </div>
+      {size === "small" && weeksCount === 52 && (
+        <p className="text-[9px] text-muted-foreground text-center mt-1">Showing last 3 months for small layout</p>
+      )}
     </div>
   )
 }
 
-function BarChartRenderer({ dateCountMap, maxCount, weeksCount, today, unit, color }: ChartProps) {
+function BarChartRenderer({ dateCountMap, maxCount, weeksCount, today, unit, size = "medium", color }: ChartProps) {
   const bars = useMemo(() => {
     const days = weeksCount * 7
     const start = subDays(today, days - 1)
@@ -544,10 +571,13 @@ function BarChartRenderer({ dateCountMap, maxCount, weeksCount, today, unit, col
     })
   }, [dateCountMap, maxCount, weeksCount, today])
 
+  const containerHeight = size === "small" ? "h-36" : "h-40"
+  const barMinWidth = size === "small" ? "min-w-[20px]" : "min-w-[28px]"
+
   return (
-    <div className="flex h-40 items-end gap-1 overflow-x-auto pb-2 pt-8">
+    <div className={`flex ${containerHeight} items-end gap-1 overflow-x-auto pb-2 pt-6`}>
       {bars.map((b, i) => (
-        <div key={i} className="group relative flex h-full flex-1 min-w-[28px] flex-col items-center justify-end">
+        <div key={i} className={`group relative flex h-full flex-1 ${barMinWidth} flex-col items-center justify-end`}>
           <div className="absolute -top-8 hidden whitespace-nowrap rounded-md border bg-popover px-2 py-1 text-[10px] font-medium text-popover-foreground shadow-sm group-hover:block z-10">
             {b.val} {unit}
           </div>
@@ -566,3 +596,4 @@ function BarChartRenderer({ dateCountMap, maxCount, weeksCount, today, unit, col
     </div>
   )
 }
+

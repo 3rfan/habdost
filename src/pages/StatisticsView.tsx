@@ -13,6 +13,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { useAppStore } from "@/store"
 import type { Timeframe, GraphType, StatisticsWidget, Habit, WidgetSize } from "@/types"
 
+
 const WEEKDAY_LABELS = ["", "Mon", "", "Wed", "", "Fri", ""]
 
 const TIMEFRAMES: { label: string; value: Timeframe; weeks: number }[] = [
@@ -297,7 +298,7 @@ export default function StatisticsView() {
       )}
 
       {/* WIDGETS GRID */}
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+      <div className="grid grid-cols-2 gap-2.5 sm:gap-3 md:gap-4">
         {widgets.map((widget) => (
           <WidgetRenderer
             key={widget.id}
@@ -357,8 +358,8 @@ function WidgetRenderer({
   const isSmall = widget.size === "small"
 
   return (
-    <Card className={`relative overflow-hidden ${isSmall ? "md:col-span-1" : "md:col-span-2"}`}>
-      <div className="absolute right-2 top-2 flex gap-1 z-10">
+    <Card className={`relative overflow-hidden ${isSmall ? "col-span-1" : "col-span-2"}`}>
+      <div className="absolute right-1.5 top-1.5 flex gap-1 z-10 sm:right-2 sm:top-2">
         <Button
           variant="ghost"
           size="icon"
@@ -376,23 +377,23 @@ function WidgetRenderer({
           <Trash2 className="h-3 w-3" />
         </Button>
       </div>
-      <CardHeader className="pb-2 pt-4">
-        <CardTitle className="text-sm flex items-center justify-between pr-14">
-          <span>
-            {habit.emoji && <span className="mr-1.5">{habit.emoji}</span>}
+      <CardHeader className={isSmall ? "p-2.5 pb-1 sm:p-4 sm:pb-2" : "pb-2 pt-4"}>
+        <CardTitle className="text-xs sm:text-sm flex items-center justify-between pr-12 sm:pr-14">
+          <span className="truncate">
+            {habit.emoji && <span className="mr-1 sm:mr-1.5">{habit.emoji}</span>}
             #{habit.tag}
           </span>
           {isSmall && (
-            <span className="text-[10px] font-normal uppercase tracking-wider text-muted-foreground border rounded px-1.5 py-0.5">
+            <span className="text-[9px] sm:text-[10px] font-normal uppercase tracking-wider text-muted-foreground border rounded px-1 py-0.5 shrink-0 ml-1">
               Small
             </span>
           )}
         </CardTitle>
-        <p className="text-xs text-muted-foreground capitalize">
+        <p className="text-[10px] sm:text-xs text-muted-foreground capitalize truncate">
           {widget.graphType.replace("-", " ")} • {TIMEFRAMES.find((t) => t.value === widget.timeframe)?.label}
         </p>
       </CardHeader>
-      <CardContent>
+      <CardContent className={isSmall ? "p-2.5 pt-0 sm:p-4 sm:pt-0" : ""}>
         {widget.graphType === "mini-heatmap" && (
           <MiniHeatmapRenderer dateCountMap={dateCountMap} maxCount={maxCount} weeksCount={weeksCount} today={today} size={widget.size ?? "medium"} />
         )}
@@ -471,11 +472,11 @@ function MiniHeatmapRenderer({ dateCountMap, maxCount, weeksCount, today, size =
   }
 
   // 1 Month & 3 Months Layout (Dynamic CSS Grid of Circles)
-  const containerHeight = size === "small" ? "h-32" : "h-40"
+  const containerHeight = size === "small" ? "h-28 sm:h-32" : "h-36 sm:h-40"
   return (
-    <div className={`${containerHeight} w-full pb-2 pt-4 flex flex-col justify-between`}>
+    <div className={`${containerHeight} w-full pb-1 pt-2 sm:pb-2 sm:pt-4 flex flex-col justify-between`}>
       <div
-        className="grid h-full w-full gap-1"
+        className="grid h-full w-full gap-[1px] sm:gap-1"
         style={{
           gridTemplateRows: `repeat(7, minmax(0, 1fr))`,
           gridAutoColumns: `minmax(0, 1fr)`,
@@ -498,7 +499,7 @@ function MiniHeatmapRenderer({ dateCountMap, maxCount, weeksCount, today, size =
         )}
       </div>
       {size === "small" && weeksCount === 52 && (
-        <p className="text-[9px] text-muted-foreground text-center mt-1">Showing last 3 months for small layout</p>
+        <p className="text-[8px] sm:text-[9px] text-muted-foreground text-center mt-0.5 truncate">Last 3 months</p>
       )}
     </div>
   )
@@ -523,8 +524,8 @@ function BarChartRenderer({ dateCountMap, maxCount, weeksCount, today, unit, siz
     })
   }, [dateCountMap, maxCount, weeksCount, today])
 
-  const containerHeight = size === "small" ? "h-36" : "h-40"
-  const barMinWidth = size === "small" ? "min-w-[20px]" : "min-w-[28px]"
+  const containerHeight = size === "small" ? "h-32 sm:h-36" : "h-36 sm:h-40"
+  const barMinWidth = size === "small" ? "min-w-[14px] sm:min-w-[20px]" : "min-w-[28px]"
 
   return (
     <div className={`flex ${containerHeight} items-end gap-1 overflow-x-auto pb-2 pt-6`}>

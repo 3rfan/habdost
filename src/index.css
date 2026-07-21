@@ -133,3 +133,11 @@
     @apply font-sans;
     }
 }
+
+/* Smooth theme transition — applied only after React hydration to prevent
+   color fade on initial page load (the FOCT script sets .dark before React
+   mounts, so adding .theme-ready post-mount is safe). Targets * because
+   background-color does not inherit and all elements need their own rule. */
+html.theme-ready * {
+  transition: background-color 200ms ease, color 200ms ease, border-color 200ms ease !important;
+}

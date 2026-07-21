@@ -184,6 +184,8 @@ export default function MyDay() {
     })
   )
 
+  const [todoToDeleteConfirm, setTodoToDeleteConfirm] = useState<Todo | null>(null)
+
   const handleInitiateDelete = (todoId: string) => {
     const todoToDelete = todos.find((t) => t.id === todoId)
     if (!todoToDelete) return
@@ -407,7 +409,7 @@ export default function MyDay() {
                       {starredTodos.map((todo) => (
                         <SwipeableTodoItem
                           key={todo.id}
-                          onDelete={() => handleInitiateDelete(todo.id)}
+                          onDelete={() => setTodoToDeleteConfirm(todo)}
                         >
                           <SortableTodoItem
                             todo={todo}
@@ -441,7 +443,7 @@ export default function MyDay() {
                       {unstarredTodos.map((todo) => (
                         <SwipeableTodoItem
                           key={todo.id}
-                          onDelete={() => handleInitiateDelete(todo.id)}
+                          onDelete={() => setTodoToDeleteConfirm(todo)}
                         >
                           <SortableTodoItem
                             todo={todo}
@@ -459,6 +461,36 @@ export default function MyDay() {
           </DndContext>
         )}
       </section>
+
+      {/* Delete Task Confirmation Modal */}
+      {todoToDeleteConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <Card className="w-full max-w-sm">
+            <CardHeader>
+              <CardTitle className="text-lg">Delete Task?</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                Are you sure you want to delete &quot;<span className="font-semibold text-foreground">{todoToDeleteConfirm.title}</span>&quot;?
+              </p>
+              <div className="flex justify-end gap-2">
+                <Button variant="ghost" onClick={() => setTodoToDeleteConfirm(null)}>
+                  Cancel
+                </Button>
+                <Button
+                  variant="destructive"
+                  onClick={() => {
+                    handleInitiateDelete(todoToDeleteConfirm.id)
+                    setTodoToDeleteConfirm(null)
+                  }}
+                >
+                  Delete Task
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       {/* Floating Undo Toast notification */}
       {undoToastInfo && (

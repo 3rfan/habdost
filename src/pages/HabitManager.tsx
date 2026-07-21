@@ -28,6 +28,7 @@ export default function HabitManager() {
 
   const [isFormOpen, setIsFormOpen] = useState(false)
   const [showCancelModal, setShowCancelModal] = useState(false)
+  const [habitToDelete, setHabitToDelete] = useState<Habit | null>(null)
 
   const [name, setName] = useState("")
   const [tag, setTag] = useState("")
@@ -130,10 +131,6 @@ export default function HabitManager() {
     setIsFormOpen(false) // Auto-collapse form after creation
   }
 
-  const handleDelete = async (id: string) => {
-    await deleteHabit(id)
-  }
-
   return (
     <div className="space-y-6">
       {/* Cancel Confirmation Modal */}
@@ -153,6 +150,36 @@ export default function HabitManager() {
                 </Button>
                 <Button variant="destructive" onClick={confirmCancel}>
                   Discard Habit
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Delete Habit Confirmation Modal */}
+      {habitToDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <Card className="w-full max-w-sm">
+            <CardHeader>
+              <CardTitle className="text-lg">Delete Habit?</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                Are you sure you want to delete &quot;<span className="font-semibold text-foreground">{habitToDelete.name}</span>&quot;? This will stop future automatic scheduling for this habit.
+              </p>
+              <div className="flex justify-end gap-2">
+                <Button variant="ghost" onClick={() => setHabitToDelete(null)}>
+                  Cancel
+                </Button>
+                <Button
+                  variant="destructive"
+                  onClick={async () => {
+                    await deleteHabit(habitToDelete.id)
+                    setHabitToDelete(null)
+                  }}
+                >
+                  Delete Habit
                 </Button>
               </div>
             </CardContent>
@@ -183,198 +210,204 @@ export default function HabitManager() {
             </div>
           </div>
         </CardHeader>
-        {isFormOpen && (
-          <CardContent className="pt-2">
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="habit-name">Habit Name</Label>
-              <Input
-                id="habit-name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="e.g. Morning workout"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="habit-tag">Tag (used with #hashtag in todos)</Label>
-              <Input
-                id="habit-tag"
-                value={tag}
-                onChange={(e) => setTag(e.target.value)}
-                placeholder="e.g. gym"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="habit-emoji">Emoji (optional)</Label>
-              <Input
-                id="habit-emoji"
-                value={emoji}
-                onChange={(e) => setEmoji(e.target.value)}
-                placeholder="e.g. 🙂"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label>Tracking Type</Label>
-              <div className="flex gap-4">
-                <label className="flex items-center gap-2 text-sm">
-                  <input
-                    type="radio"
-                    name="habit-type"
-                    value="boolean"
-                    checked={type === "boolean"}
-                    onChange={() => setType("boolean")}
-                  />
-                  Yes / No
-                </label>
-                <label className="flex items-center gap-2 text-sm">
-                  <input
-                    type="radio"
-                    name="habit-type"
-                    value="numeric"
-                    checked={type === "numeric"}
-                    onChange={() => setType("numeric")}
-                  />
-                  Numeric
-                </label>
-              </div>
-            </div>
-
-            {type === "numeric" && (
-              <div className="space-y-2">
-                <Label htmlFor="habit-unit">Unit (e.g., glasses, hours)</Label>
-                <Input
-                  id="habit-unit"
-                  value={unit}
-                  onChange={(e) => setUnit(e.target.value)}
-                  placeholder="e.g. pages"
-                />
-              </div>
-            )}
-
-            <div className="space-y-2">
-              <Label>Schedule</Label>
-              <div className="flex flex-col gap-2">
-                <label className="flex items-center gap-2 text-sm cursor-pointer">
-                  <input
-                    type="radio"
-                    name="recurrence-type"
-                    value="weekdays"
-                    checked={recurrenceType === "weekdays"}
-                    onChange={() => setRecurrenceType("weekdays")}
-                  />
-                  Specific Weekdays
-                </label>
-                <label className="flex items-center gap-2 text-sm cursor-pointer">
-                  <input
-                    type="radio"
-                    name="recurrence-type"
-                    value="interval"
-                    checked={recurrenceType === "interval"}
-                    onChange={() => setRecurrenceType("interval")}
-                  />
-                  Every N Days
-                </label>
-                <label className="flex items-center gap-2 text-sm cursor-pointer">
-                  <input
-                    type="radio"
-                    name="recurrence-type"
-                    value="none"
-                    checked={recurrenceType === "none"}
-                    onChange={() => setRecurrenceType("none")}
-                  />
-                  No Fixed Schedule
-                  <span className="text-xs text-muted-foreground">(add via #tag in My Day)</span>
-                </label>
-              </div>
-            </div>
-
-            {recurrenceType === "weekdays" && (
-              <div className="space-y-2">
-                <Label>Repeat on</Label>
-                <div className="flex flex-wrap gap-2">
-                  {DAYS.map((day) => {
-                    const isSelected = scheduledDays.includes(day.value)
-                    return (
-                      <button
-                        key={day.value}
-                        type="button"
-                        onClick={() => toggleDay(day.value)}
-                        className={`flex h-9 w-11 items-center justify-center rounded-md border text-xs font-medium transition-colors ${
-                          isSelected
-                            ? "border-primary bg-primary text-primary-foreground"
-                            : "border-input bg-background text-muted-foreground hover:bg-accent hover:text-accent-foreground"
-                        }`}
-                      >
-                        {day.label}
-                      </button>
-                    )
-                  })}
-                </div>
-              </div>
-            )}
-
-            {recurrenceType === "interval" && (
-              <div className="flex gap-4">
-                <div className="flex-1 space-y-2">
-                  <Label htmlFor="recurrence-interval">Every (days)</Label>
+        <div
+          className={`grid transition-[grid-template-rows,opacity] duration-300 ease-in-out ${
+            isFormOpen ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"
+          }`}
+        >
+          <div className="overflow-hidden">
+            <CardContent className="pt-2">
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="habit-name">Habit Name</Label>
                   <Input
-                    id="recurrence-interval"
-                    type="number"
-                    min={1}
-                    value={recurrenceInterval}
-                    onChange={(e) => setRecurrenceInterval(parseInt(e.target.value) || 1)}
+                    id="habit-name"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder="e.g. Morning workout"
                   />
                 </div>
-                <div className="flex-1 space-y-2">
-                  <Label htmlFor="recurrence-start-date">Start Date</Label>
+
+                <div className="space-y-2">
+                  <Label htmlFor="habit-tag">Tag (used with #hashtag in todos)</Label>
                   <Input
-                    id="recurrence-start-date"
-                    type="date"
-                    value={recurrenceStartDate}
-                    onChange={(e) => setRecurrenceStartDate(e.target.value)}
+                    id="habit-tag"
+                    value={tag}
+                    onChange={(e) => setTag(e.target.value)}
+                    placeholder="e.g. gym"
                   />
                 </div>
-              </div>
-            )}
 
-            {recurrenceType === "none" && (
-              <div className="rounded-md border border-dashed border-muted-foreground/30 bg-muted/30 px-4 py-3">
-                <p className="text-xs text-muted-foreground">
-                  This habit won't appear automatically in My Day. Add it manually by typing{" "}
-                  <span className="font-mono font-semibold text-foreground">#{tag || "tag"}</span>{" "}
-                  in the todo input to log it on any day you like.
-                </p>
-              </div>
-            )}
+                <div className="space-y-2">
+                  <Label htmlFor="habit-emoji">Emoji (optional)</Label>
+                  <Input
+                    id="habit-emoji"
+                    value={emoji}
+                    onChange={(e) => setEmoji(e.target.value)}
+                    placeholder="e.g. 🙂"
+                  />
+                </div>
 
-            <div className="flex gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={handleCancelClick}
-                className="flex-1"
-              >
-                Cancel
-              </Button>
-              <Button
-                type="submit"
-                className="flex-1"
-                disabled={
-                  !name.trim() ||
-                  !tag.trim() ||
-                  (recurrenceType === "weekdays" && scheduledDays.length === 0) ||
-                  (recurrenceType === "interval" && (!recurrenceInterval || recurrenceInterval < 1))
-                }
-              >
-                Create Habit
-              </Button>
-            </div>
-          </form>
-        </CardContent>
-        )}
+                <div className="space-y-2">
+                  <Label>Tracking Type</Label>
+                  <div className="flex gap-4">
+                    <label className="flex items-center gap-2 text-sm">
+                      <input
+                        type="radio"
+                        name="habit-type"
+                        value="boolean"
+                        checked={type === "boolean"}
+                        onChange={() => setType("boolean")}
+                      />
+                      Yes / No
+                    </label>
+                    <label className="flex items-center gap-2 text-sm">
+                      <input
+                        type="radio"
+                        name="habit-type"
+                        value="numeric"
+                        checked={type === "numeric"}
+                        onChange={() => setType("numeric")}
+                      />
+                      Numeric
+                    </label>
+                  </div>
+                </div>
+
+                {type === "numeric" && (
+                  <div className="space-y-2">
+                    <Label htmlFor="habit-unit">Unit (e.g., glasses, hours)</Label>
+                    <Input
+                      id="habit-unit"
+                      value={unit}
+                      onChange={(e) => setUnit(e.target.value)}
+                      placeholder="e.g. pages"
+                    />
+                  </div>
+                )}
+
+                <div className="space-y-2">
+                  <Label>Schedule</Label>
+                  <div className="flex flex-col gap-2">
+                    <label className="flex items-center gap-2 text-sm cursor-pointer">
+                      <input
+                        type="radio"
+                        name="recurrence-type"
+                        value="weekdays"
+                        checked={recurrenceType === "weekdays"}
+                        onChange={() => setRecurrenceType("weekdays")}
+                      />
+                      Specific Weekdays
+                    </label>
+                    <label className="flex items-center gap-2 text-sm cursor-pointer">
+                      <input
+                        type="radio"
+                        name="recurrence-type"
+                        value="interval"
+                        checked={recurrenceType === "interval"}
+                        onChange={() => setRecurrenceType("interval")}
+                      />
+                      Every N Days
+                    </label>
+                    <label className="flex items-center gap-2 text-sm cursor-pointer">
+                      <input
+                        type="radio"
+                        name="recurrence-type"
+                        value="none"
+                        checked={recurrenceType === "none"}
+                        onChange={() => setRecurrenceType("none")}
+                      />
+                      No Fixed Schedule
+                      <span className="text-xs text-muted-foreground">(add via #tag in My Day)</span>
+                    </label>
+                  </div>
+                </div>
+
+                {recurrenceType === "weekdays" && (
+                  <div className="space-y-2">
+                    <Label>Repeat on</Label>
+                    <div className="flex flex-wrap gap-2">
+                      {DAYS.map((day) => {
+                        const isSelected = scheduledDays.includes(day.value)
+                        return (
+                          <button
+                            key={day.value}
+                            type="button"
+                            onClick={() => toggleDay(day.value)}
+                            className={`flex h-9 w-11 items-center justify-center rounded-md border text-xs font-medium transition-colors ${
+                              isSelected
+                                ? "border-primary bg-primary text-primary-foreground"
+                                : "border-input bg-background text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+                            }`}
+                          >
+                            {day.label}
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {recurrenceType === "interval" && (
+                  <div className="flex gap-4">
+                    <div className="flex-1 space-y-2">
+                      <Label htmlFor="recurrence-interval">Every (days)</Label>
+                      <Input
+                        id="recurrence-interval"
+                        type="number"
+                        min={1}
+                        value={recurrenceInterval}
+                        onChange={(e) => setRecurrenceInterval(parseInt(e.target.value) || 1)}
+                      />
+                    </div>
+                    <div className="flex-1 space-y-2">
+                      <Label htmlFor="recurrence-start-date">Start Date</Label>
+                      <Input
+                        id="recurrence-start-date"
+                        type="date"
+                        value={recurrenceStartDate}
+                        onChange={(e) => setRecurrenceStartDate(e.target.value)}
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {recurrenceType === "none" && (
+                  <div className="rounded-md border border-dashed border-muted-foreground/30 bg-muted/30 px-4 py-3">
+                    <p className="text-xs text-muted-foreground">
+                      This habit won't appear automatically in My Day. Add it manually by typing{" "}
+                      <span className="font-mono font-semibold text-foreground">#{tag || "tag"}</span>{" "}
+                      in the todo input to log it on any day you like.
+                    </p>
+                  </div>
+                )}
+
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handleCancelClick}
+                    className="flex-1"
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    type="submit"
+                    className="flex-1"
+                    disabled={
+                      !name.trim() ||
+                      !tag.trim() ||
+                      (recurrenceType === "weekdays" && scheduledDays.length === 0) ||
+                      (recurrenceType === "interval" && (!recurrenceInterval || recurrenceInterval < 1))
+                    }
+                  >
+                    Create Habit
+                  </Button>
+                </div>
+              </form>
+            </CardContent>
+          </div>
+        </div>
       </Card>
 
       {/* Habit List */}
@@ -424,7 +457,7 @@ export default function HabitManager() {
                   <Button
                     variant="ghost"
                     size="icon"
-                    onClick={() => handleDelete(habit.id)}
+                    onClick={() => setHabitToDelete(habit)}
                     className="text-muted-foreground hover:text-destructive"
                   >
                     <Trash2 className="h-4 w-4" />

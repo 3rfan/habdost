@@ -2,15 +2,24 @@ import { format, getDay, parseISO, differenceInCalendarDays } from "date-fns"
 
 import type { Habit, Todo } from "@/types"
 
-function isHabitDueToday(habit: Habit, todayDate: Date): boolean {
+/**
+ * Determines whether a habit is due on a given date.
+ * Exported so CalendarView and other consumers can reuse the same logic
+ * without duplicating it — prevents scheduling/display drift.
+ */
+export function isHabitDueOnDate(habit: Habit, date: Date): boolean {
+  // "none" habits have no automatic schedule — never due
+  if (habit.recurrenceType === "none") return false
+
   if (habit.recurrenceType === "interval") {
     if (!habit.recurrenceStartDate || !habit.recurrenceInterval) return false
     const start = parseISO(habit.recurrenceStartDate)
-    const diff = differenceInCalendarDays(todayDate, start)
+    const diff = differenceInCalendarDays(date, start)
     return diff >= 0 && diff % habit.recurrenceInterval === 0
   }
-  // Default: weekdays
-  const dayOfWeek = getDay(todayDate)
+
+  // Default: "weekdays" — check if the day-of-week is in scheduledDays
+  const dayOfWeek = getDay(date)
   return habit.scheduledDays.includes(dayOfWeek)
 }
 
@@ -19,7 +28,7 @@ function isHabitDueToday(habit: Habit, todayDate: Date): boolean {
  * Returns an array of new Todo objects ready to be saved.
  *
  * A todo is generated for a habit when:
- *   1. Today's day-of-week or interval matches
+ *   1. Today's day-of-week or interval matches (recurrenceType !== "none")
  *   2. No existing todo with that habit's linkedHabitId already exists for today
  */
 export function generateRecurringTodos(
@@ -42,7 +51,7 @@ export function generateRecurringTodos(
   const newTodos: Todo[] = []
 
   for (const habit of habits) {
-    if (!isHabitDueToday(habit, todayDate)) {
+    if (!isHabitDueOnDate(habit, todayDate)) {
       continue
     }
 

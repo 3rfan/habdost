@@ -22,6 +22,31 @@ const TIMEFRAMES: { label: string; value: Timeframe; weeks: number }[] = [
   { label: "1 Year", value: "1y", weeks: 52 },
 ]
 
+function hexToRgba(hex?: string, alpha = 1): string {
+  if (!hex) return `rgba(16, 185, 129, ${alpha})`
+  let c = hex.replace("#", "")
+  if (c.length === 3) {
+    c = c.split("").map((x) => x + x).join("")
+  }
+  if (c.length !== 6) return `rgba(16, 185, 129, ${alpha})`
+  const r = parseInt(c.substring(0, 2), 16)
+  const g = parseInt(c.substring(2, 4), 16)
+  const b = parseInt(c.substring(4, 6), 16)
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`
+}
+
+function getCustomIntensityStyle(count: number, maxCount: number, customColor?: string): React.CSSProperties {
+  if (count === 0 || maxCount === 0) return {}
+  const ratio = count / maxCount
+  let alpha = 0.25
+  if (ratio <= 0.25) alpha = 0.25
+  else if (ratio <= 0.5) alpha = 0.5
+  else if (ratio <= 0.75) alpha = 0.75
+  else alpha = 1.0
+
+  return { backgroundColor: hexToRgba(customColor, alpha) }
+}
+
 function getIntensityClass(count: number, maxCount: number): string {
   if (count === 0 || maxCount === 0) return "bg-muted"
   const ratio = count / maxCount
@@ -132,7 +157,11 @@ export default function StatisticsView() {
           </button>
           {habits.map((h) => (
             <button key={h.id} onClick={() => setSelectedHabitId(h.id)}
-              className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${selectedHabitId === h.id ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-accent"}`}>
+              className={`flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium transition-colors ${selectedHabitId === h.id ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-accent"}`}>
+              <span
+                className="inline-block h-2 w-2 rounded-full shrink-0 border border-black/10 dark:border-white/10"
+                style={{ backgroundColor: h.color || "#10b981" }}
+              />
               #{h.tag}
             </button>
           ))}
@@ -183,11 +212,21 @@ export default function StatisticsView() {
                     <div className="flex gap-[3px]">
                       {weeks.map((week, wi) => (
                         <div key={wi} className="flex flex-col gap-[3px]">
-                          {week.map((d, di) => d ? (
-                            <div key={d} title={`${d}: ${dateCountMap.get(d) ?? 0}`} className={`h-3 w-3 rounded-sm transition-colors ${getIntensityClass(dateCountMap.get(d) ?? 0, maxCount)}`} />
-                          ) : (
-                            <div key={di} className="h-3 w-3" />
-                          ))}
+                          {week.map((d, di) => {
+                            const count = dateCountMap.get(d) ?? 0
+                            const selHabit = selectedHabitId ? habits.find(h => h.id === selectedHabitId) : undefined
+                            const customStyle = count > 0 ? getCustomIntensityStyle(count, maxCount, selHabit?.color) : {}
+                            return d ? (
+                              <div
+                                key={d}
+                                title={`${d}: ${count}`}
+                                style={customStyle}
+                                className={`h-3 w-3 rounded-sm transition-colors ${count === 0 ? "bg-muted" : selHabit?.color ? "" : getIntensityClass(count, maxCount)}`}
+                              />
+                            ) : (
+                              <div key={di} className="h-3 w-3" />
+                            )
+                          })}
                         </div>
                       ))}
                     </div>
@@ -364,9 +403,15 @@ function WidgetRenderer({
         </Button>
       </div>
       <CardHeader className="pb-2 pt-4">
-        <CardTitle className="text-sm">
-          {habit.emoji && <span className="mr-1.5">{habit.emoji}</span>}
-          #{habit.tag}
+        <CardTitle className="text-sm flex items-center gap-2">
+          <span
+            className="inline-block h-3 w-3 rounded-full shrink-0 border border-black/10 dark:border-white/10 shadow-xs"
+            style={{ backgroundColor: habit.color || "#10b981" }}
+          />
+          <span>
+            {habit.emoji && <span className="mr-1.5">{habit.emoji}</span>}
+            #{habit.tag}
+          </span>
         </CardTitle>
         <p className="text-xs text-muted-foreground capitalize">
           {widget.graphType.replace("-", " ")} • {TIMEFRAMES.find((t) => t.value === widget.timeframe)?.label}
@@ -374,10 +419,10 @@ function WidgetRenderer({
       </CardHeader>
       <CardContent>
         {widget.graphType === "mini-heatmap" && (
-          <MiniHeatmapRenderer dateCountMap={dateCountMap} maxCount={maxCount} weeksCount={weeksCount} today={today} />
+          <MiniHeatmapRenderer dateCountMap={dateCountMap} maxCount={maxCount} weeksCount={weeksCount} today={today} color={habit.color} />
         )}
         {widget.graphType === "bar-chart" && (
-          <BarChartRenderer dateCountMap={dateCountMap} maxCount={maxCount} weeksCount={weeksCount} today={today} unit={habit.unit} />
+          <BarChartRenderer dateCountMap={dateCountMap} maxCount={maxCount} weeksCount={weeksCount} today={today} unit={habit.unit} color={habit.color} />
         )}
       </CardContent>
     </Card>
@@ -390,9 +435,10 @@ interface ChartProps {
   weeksCount: number
   today: Date
   unit?: string
+  color?: string
 }
 
-function MiniHeatmapRenderer({ dateCountMap, maxCount, weeksCount, today }: ChartProps) {
+function MiniHeatmapRenderer({ dateCountMap, maxCount, weeksCount, today, color }: ChartProps) {
   const { weeks } = useMemo(() => {
     const start = startOfWeek(subDays(today, weeksCount * 7 - 1))
     const allDays = eachDayOfInterval({ start, end: today })
@@ -456,25 +502,30 @@ function MiniHeatmapRenderer({ dateCountMap, maxCount, weeksCount, today }: Char
         }}
       >
         {weeks.flatMap((week: string[], wi: number) =>
-          week.map((d, di) => (
-            <div key={`${wi}-${di}`} className="flex items-center justify-center">
-              {d ? (
-                <div
-                  title={`${d}: ${dateCountMap.get(d) ?? 0}`}
-                  className={`aspect-square h-full max-w-full rounded-full transition-colors ${getIntensityClass(dateCountMap.get(d) ?? 0, maxCount)}`}
-                />
-              ) : (
-                <div className="aspect-square h-full max-w-full rounded-full" />
-              )}
-            </div>
-          ))
+          week.map((d, di) => {
+            const count = dateCountMap.get(d) ?? 0
+            const customStyle = count > 0 ? getCustomIntensityStyle(count, maxCount, color) : {}
+            return (
+              <div key={`${wi}-${di}`} className="flex items-center justify-center">
+                {d ? (
+                  <div
+                    title={`${d}: ${count}`}
+                    style={customStyle}
+                    className={`aspect-square h-full max-w-full rounded-full transition-colors ${count === 0 ? "bg-muted" : color ? "" : getIntensityClass(count, maxCount)}`}
+                  />
+                ) : (
+                  <div className="aspect-square h-full max-w-full rounded-full" />
+                )}
+              </div>
+            )
+          })
         )}
       </div>
     </div>
   )
 }
 
-function BarChartRenderer({ dateCountMap, maxCount, weeksCount, today, unit }: ChartProps) {
+function BarChartRenderer({ dateCountMap, maxCount, weeksCount, today, unit, color }: ChartProps) {
   const bars = useMemo(() => {
     const days = weeksCount * 7
     const start = subDays(today, days - 1)
@@ -501,7 +552,13 @@ function BarChartRenderer({ dateCountMap, maxCount, weeksCount, today, unit }: C
             {b.val} {unit}
           </div>
           <div className="flex w-full flex-1 items-end justify-center">
-            <div className="w-full max-w-[24px] rounded-t-sm bg-primary transition-all hover:bg-primary/80" style={{ height: `${b.height}%` }} />
+            <div
+              className="w-full max-w-[24px] rounded-t-sm transition-all hover:opacity-80"
+              style={{
+                height: `${b.height}%`,
+                backgroundColor: color || "var(--color-primary)"
+              }}
+            />
           </div>
           <span className="mt-1 whitespace-nowrap text-[10px] text-muted-foreground">{b.label}</span>
         </div>

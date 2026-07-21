@@ -81,11 +81,18 @@ function SortableTodoItem({
         <p
           className={
             todo.completed
-              ? "text-sm text-muted-foreground line-through truncate"
-              : "text-sm text-card-foreground truncate"
+              ? "text-sm text-muted-foreground line-through truncate flex items-center gap-1.5"
+              : "text-sm text-card-foreground truncate flex items-center gap-1.5"
           }
         >
-          {habit?.emoji && <span className="mr-1.5">{habit.emoji}</span>}
+          {habit && (
+            <span
+              className="inline-block h-2.5 w-2.5 rounded-full shrink-0 border border-black/10 dark:border-white/10 shadow-xs"
+              style={{ backgroundColor: habit.color || "#10b981" }}
+              title={`Linked to habit: ${habit.name}`}
+            />
+          )}
+          {habit?.emoji && <span className="mr-0.5">{habit.emoji}</span>}
           {todo.title}
         </p>
         {todo.linkedHabitId ? (
@@ -490,8 +497,14 @@ export default function MyDay() {
                       <GripVertical className="h-4 w-4" />
                     </span>
                     <div className="flex-1 min-w-0 space-y-1">
-                      <p className={activeTodo.completed ? "text-sm text-muted-foreground line-through truncate" : "text-sm text-card-foreground truncate"}>
-                        {activeHabit?.emoji && <span className="mr-1.5">{activeHabit.emoji}</span>}
+                      <p className={activeTodo.completed ? "text-sm text-muted-foreground line-through truncate flex items-center gap-1.5" : "text-sm text-card-foreground truncate flex items-center gap-1.5"}>
+                        {activeHabit && (
+                          <span
+                            className="inline-block h-2.5 w-2.5 rounded-full shrink-0 border border-black/10 dark:border-white/10 shadow-xs"
+                            style={{ backgroundColor: activeHabit.color || "#10b981" }}
+                          />
+                        )}
+                        {activeHabit?.emoji && <span className="mr-0.5">{activeHabit.emoji}</span>}
                         {activeTodo.title}
                       </p>
                       {activeTodo.linkedHabitId && (

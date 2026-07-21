@@ -8,6 +8,7 @@ export interface Habit {
   type?: "boolean" | "numeric"
   unit?: string
   emoji?: string
+  color?: string
   recurrenceType?: "weekdays" | "interval" | "none"
   recurrenceInterval?: number
   recurrenceStartDate?: string

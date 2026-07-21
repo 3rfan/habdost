@@ -57,11 +57,11 @@ function SortableTodoItem({
     <li
       ref={setNodeRef}
       style={style}
-      className="flex items-center gap-3 rounded-md border bg-card p-3 shadow-sm"
+      className="flex items-center gap-3 rounded-md border bg-card p-3 shadow-sm select-none touch-pan-y"
     >
       <button
         type="button"
-        className="cursor-grab p-1 text-muted-foreground hover:text-foreground active:cursor-grabbing touch-none"
+        className="cursor-grab p-1 text-muted-foreground hover:text-foreground active:cursor-grabbing touch-none select-none"
         {...attributes}
         {...listeners}
       >
@@ -170,8 +170,8 @@ export default function MyDay() {
     }),
     useSensor(TouchSensor, {
       activationConstraint: {
-        delay: 250,
-        tolerance: 5,
+        delay: 200,
+        tolerance: 6,
       },
     })
   )

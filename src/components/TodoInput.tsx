@@ -166,7 +166,7 @@ export default function TodoInput() {
           onKeyDown={handleKeyDown}
           onBlur={() => setTimeout(() => setShowDropdown(false), 150)}
           placeholder="Add a todo or #habit tag"
-          className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className="h-10 w-full rounded-md border border-input bg-background px-3 text-base outline-none focus-visible:ring-2 focus-visible:ring-ring"
         />
         {showDropdown && suggestions.length > 0 && (
           <ul className="absolute left-0 right-0 top-full z-50 mt-1 max-h-60 overflow-y-auto rounded-md border bg-popover p-1 shadow-md">

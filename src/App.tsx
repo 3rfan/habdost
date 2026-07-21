@@ -53,7 +53,24 @@ function App() {
   }, [loadAll, addTodo])
 
   const [isNavVisible, setIsNavVisible] = useState(true)
+  // Ref to the nav element so we can defer the transition style to after first
+  // paint. This prevents the nav from animating in on initial load while still
+  // enabling the slide-in/out animation on subsequent scroll interactions.
+  const navRef = useRef<HTMLElement>(null)
   const lastScrollY = useRef(0)
+
+  useEffect(() => {
+    // Use requestAnimationFrame so the nav's initial translate-y-0 is painted
+    // before we apply the transition, preventing an unwanted slide-in on load.
+    const raf = requestAnimationFrame(() => {
+      if (navRef.current) {
+        navRef.current.style.transitionProperty = "transform"
+        navRef.current.style.transitionDuration = "300ms"
+        navRef.current.style.transitionTimingFunction = "ease-in-out"
+      }
+    })
+    return () => cancelAnimationFrame(raf)
+  }, [])
 
   useEffect(() => {
     const handleScroll = () => {
@@ -107,9 +124,12 @@ function App() {
         </Routes>
       </main>
 
-      <nav className={`fixed inset-x-0 bottom-0 z-10 border-t bg-background/90 backdrop-blur pb-[env(safe-area-inset-bottom,0px)] transition-transform duration-300 ease-in-out ${
-        isNavVisible ? "translate-y-0" : "translate-y-full"
-      }`}>
+      <nav
+        ref={navRef}
+        className={`fixed inset-x-0 bottom-0 z-10 border-t bg-background/90 backdrop-blur pb-[env(safe-area-inset-bottom,0px)] ${
+          isNavVisible ? "translate-y-0" : "translate-y-full"
+        }`}
+      >
         <div className="mx-auto grid h-14 max-w-screen-sm grid-cols-5 px-2">
           <NavLink
             to="/"

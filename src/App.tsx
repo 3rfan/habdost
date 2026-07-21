@@ -46,6 +46,32 @@ function App() {
     void init()
   }, [loadAll, addTodo])
 
+  const [isNavVisible, setIsNavVisible] = useState(true)
+  const lastScrollY = useRef(0)
+
+  useEffect(() => {
+    const handleScroll = () => {
+      const currentScrollY = window.scrollY
+      const diff = currentScrollY - lastScrollY.current
+
+      // Keep navbar visible when at/near top of page
+      if (currentScrollY <= 30) {
+        setIsNavVisible(true)
+      } else if (diff > 8) {
+        // Scroll DOWN -> hide navbar
+        setIsNavVisible(false)
+      } else if (diff < -8) {
+        // Scroll UP -> show navbar
+        setIsNavVisible(true)
+      }
+
+      lastScrollY.current = currentScrollY
+    }
+
+    window.addEventListener("scroll", handleScroll, { passive: true })
+    return () => window.removeEventListener("scroll", handleScroll)
+  }, [])
+
   return (
     <div className="min-h-dvh bg-background text-foreground">
       <header className="fixed inset-x-0 top-0 z-10 border-b bg-background/80 backdrop-blur pt-[env(safe-area-inset-top,0px)]">
@@ -75,7 +101,9 @@ function App() {
         </Routes>
       </main>
 
-      <nav className="fixed inset-x-0 bottom-0 z-10 border-t bg-background/90 backdrop-blur pb-[env(safe-area-inset-bottom,0px)]">
+      <nav className={`fixed inset-x-0 bottom-0 z-10 border-t bg-background/90 backdrop-blur pb-[env(safe-area-inset-bottom,0px)] transition-transform duration-300 ease-in-out ${
+        isNavVisible ? "translate-y-0" : "translate-y-full"
+      }`}>
         <div className="mx-auto grid h-14 max-w-screen-sm grid-cols-5 px-2">
           <NavLink
             to="/"

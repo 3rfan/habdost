@@ -48,6 +48,8 @@ export default function StatisticsView() {
   const [newWidgetType, setNewWidgetType] = useState<GraphType>("mini-heatmap")
   const [newWidgetTimeframe, setNewWidgetTimeframe] = useState<Timeframe>("1m")
 
+  const [widgetToDelete, setWidgetToDelete] = useState<StatisticsWidget | null>(null)
+
 
   // MAIN HEATMAP DATA
   const { dateCountMap, maxCount } = useMemo(() => {
@@ -254,6 +256,36 @@ export default function StatisticsView() {
         </Card>
       )}
 
+      {/* DELETE WIDGET CONFIRMATION MODAL */}
+      {widgetToDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <Card className="w-full max-w-sm">
+            <CardHeader>
+              <CardTitle className="text-lg">Delete Graph Widget?</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                Are you sure you want to delete this statistics widget? This action cannot be undone.
+              </p>
+              <div className="flex justify-end gap-2">
+                <Button variant="ghost" onClick={() => setWidgetToDelete(null)}>
+                  Cancel
+                </Button>
+                <Button
+                  variant="destructive"
+                  onClick={async () => {
+                    await deleteWidget(widgetToDelete.id)
+                    setWidgetToDelete(null)
+                  }}
+                >
+                  Delete Widget
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
       {/* WIDGETS GRID */}
       <div className="grid gap-4 md:grid-cols-2">
         {widgets.map((widget) => (
@@ -268,7 +300,7 @@ export default function StatisticsView() {
               setNewWidgetTimeframe(widget.timeframe)
               setShowAddModal(true)
             }}
-            onDelete={() => deleteWidget(widget.id)}
+            onDelete={() => setWidgetToDelete(widget)}
           />
         ))}
         {widgets.length === 0 && !showAddModal && (

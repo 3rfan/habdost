@@ -1,5 +1,6 @@
 import { useMemo, useState, useRef } from "react"
-import { format } from "date-fns"
+import { format, parseISO } from "date-fns"
+import { CalendarDays, X } from "lucide-react"
 
 import { useAppStore } from "@/store"
 import type { Habit, Todo } from "@/types"
@@ -35,6 +36,7 @@ export default function TodoInput() {
   const [showDropdown, setShowDropdown] = useState(false)
   const [cursorPos, setCursorPos] = useState(0)
   const inputRef = useRef<HTMLInputElement>(null)
+  const dateInputRef = useRef<HTMLInputElement>(null)
 
   const today = useMemo(() => format(new Date(), "yyyy-MM-dd"), [])
 
@@ -102,14 +104,12 @@ export default function TodoInput() {
     const textBeforeCursor = value.slice(0, cursorPos)
     const textAfterCursor = value.slice(cursorPos)
 
-    // Replace the trailing #word with #<tag>
     const newValue = textBeforeCursor.replace(/#(\w*)$/, `#${habit.tag} `) + textAfterCursor
     setValue(newValue)
 
     setShowDropdown(false)
     setSuggestions([])
 
-    // Refocus input and restore cursor position
     setTimeout(() => {
       if (inputRef.current) {
         inputRef.current.focus()
@@ -144,6 +144,18 @@ export default function TodoInput() {
     }
   }
 
+  const openDatePicker = () => {
+    try {
+      dateInputRef.current?.showPicker()
+    } catch {
+      dateInputRef.current?.click()
+    }
+  }
+
+  const formattedSelectedDate = selectedDate
+    ? format(parseISO(selectedDate), "MMM d")
+    : null
+
   return (
     <form onSubmit={handleSubmit} className="flex gap-2">
       <div className="relative flex-1">
@@ -176,12 +188,46 @@ export default function TodoInput() {
           </ul>
         )}
       </div>
-      <input
-        type="date"
-        value={selectedDate}
-        onChange={(event) => setSelectedDate(event.target.value)}
-        className="h-10 rounded-md border border-input bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring text-muted-foreground w-36"
-      />
+
+      {/* Calendar icon date picker */}
+      <div className="relative flex shrink-0 items-center">
+        <input
+          ref={dateInputRef}
+          type="date"
+          value={selectedDate}
+          onChange={(e) => setSelectedDate(e.target.value)}
+          tabIndex={-1}
+          aria-hidden="true"
+          className="absolute opacity-0 w-px h-px overflow-hidden pointer-events-none"
+          style={{ position: "absolute", pointerEvents: "none" }}
+        />
+        <button
+          type="button"
+          onClick={openDatePicker}
+          title={selectedDate ? `Date: ${formattedSelectedDate}` : "Pick a date"}
+          className={`flex h-10 items-center gap-1.5 rounded-md border px-2.5 text-sm transition-colors ${
+            selectedDate
+              ? "border-primary bg-primary/10 text-primary"
+              : "border-input bg-background text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+          }`}
+        >
+          <CalendarDays className="h-4 w-4 shrink-0" />
+          {formattedSelectedDate && (
+            <span className="text-xs font-medium">{formattedSelectedDate}</span>
+          )}
+        </button>
+        {selectedDate && (
+          <button
+            type="button"
+            onClick={() => setSelectedDate("")}
+            title="Clear date"
+            className="absolute -right-1.5 -top-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-muted text-muted-foreground hover:bg-destructive hover:text-destructive-foreground transition-colors"
+          >
+            <X className="h-2.5 w-2.5" />
+          </button>
+        )}
+      </div>
+
       <button
         type="submit"
         className="h-10 rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground shrink-0"

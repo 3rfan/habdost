@@ -3,6 +3,9 @@ import { format } from "date-fns"
 import {
   DndContext,
   DragEndEvent,
+  DragStartEvent,
+  DragOverlay,
+  closestCenter,
   useSensor,
   useSensors,
   PointerSensor,
@@ -49,7 +52,7 @@ function SortableTodoItem({
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
-    opacity: isDragging ? 0.5 : 1,
+    opacity: isDragging ? 0 : 1,
   }
 
   const habit = todo.linkedHabitId ? habits.find((h) => h.id === todo.linkedHabitId) : undefined
@@ -185,6 +188,12 @@ export default function MyDay() {
   )
 
   const [todoToDeleteConfirm, setTodoToDeleteConfirm] = useState<Todo | null>(null)
+  // Track the actively-dragged item ID so we can render a DragOverlay clone.
+  const [activeId, setActiveId] = useState<string | null>(null)
+
+  const handleDragStart = (event: DragStartEvent) => {
+    setActiveId(event.active.id as string)
+  }
 
   const handleInitiateDelete = (todoId: string) => {
     const todoToDelete = todos.find((t) => t.id === todoId)
@@ -241,6 +250,7 @@ export default function MyDay() {
   }
 
   const handleDragEnd = async (event: DragEndEvent) => {
+    setActiveId(null)
     const { active, over } = event
     if (!over || active.id === over.id) return
 
@@ -394,7 +404,12 @@ export default function MyDay() {
         {todaysTodos.length === 0 ? (
           <p className="text-sm text-muted-foreground">No todos yet. Add one above or create habits in the Habits tab!</p>
         ) : (
-          <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragStart={handleDragStart}
+            onDragEnd={handleDragEnd}
+          >
             <div className="space-y-4">
               {starredTodos.length > 0 && (
                 <div className="space-y-2">
@@ -458,6 +473,40 @@ export default function MyDay() {
                 </div>
               )}
             </div>
+
+            {/* Floating drag overlay — renders a non-interactive clone of the
+                dragged item. Not wrapped in SwipeableTodoItem to prevent touch
+                events on the overlay from triggering swipe-delete. */}
+            <DragOverlay>
+              {activeId ? (() => {
+                const activeTodo = todaysTodos.find((t) => t.id === activeId)
+                const activeHabit = activeTodo?.linkedHabitId
+                  ? habits.find((h) => h.id === activeTodo.linkedHabitId)
+                  : undefined
+                if (!activeTodo) return null
+                return (
+                  <li className="flex items-center gap-3 rounded-md border bg-card p-3 shadow-lg ring-1 ring-border select-none">
+                    <span className="p-1 text-muted-foreground">
+                      <GripVertical className="h-4 w-4" />
+                    </span>
+                    <div className="flex-1 min-w-0 space-y-1">
+                      <p className={activeTodo.completed ? "text-sm text-muted-foreground line-through truncate" : "text-sm text-card-foreground truncate"}>
+                        {activeHabit?.emoji && <span className="mr-1.5">{activeHabit.emoji}</span>}
+                        {activeTodo.title}
+                      </p>
+                      {activeTodo.linkedHabitId && (
+                        <p className="text-xs text-muted-foreground">Linked to habit</p>
+                      )}
+                    </div>
+                    <Star
+                      className="h-4 w-4 p-0"
+                      fill={activeTodo.starred ? "currentColor" : "none"}
+                      style={{ color: activeTodo.starred ? "rgb(234 179 8)" : undefined }}
+                    />
+                  </li>
+                )
+              })() : null}
+            </DragOverlay>
           </DndContext>
         )}
       </section>

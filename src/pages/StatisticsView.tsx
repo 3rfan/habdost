@@ -48,6 +48,7 @@ export default function StatisticsView() {
   const [newWidgetHabit, setNewWidgetHabit] = useState<string>("")
   const [newWidgetType, setNewWidgetType] = useState<GraphType>("mini-heatmap")
   const [newWidgetTimeframe, setNewWidgetTimeframe] = useState<Timeframe>("1m")
+  const [newWidgetSize, setNewWidgetSize] = useState<WidgetSize>("medium")
 
   const [widgetToDelete, setWidgetToDelete] = useState<StatisticsWidget | null>(null)
 
@@ -108,6 +109,7 @@ export default function StatisticsView() {
         habitId: newWidgetHabit,
         graphType: newWidgetType,
         timeframe: newWidgetTimeframe,
+        size: newWidgetSize,
       })
     } else {
       await addWidget({
@@ -115,6 +117,7 @@ export default function StatisticsView() {
         habitId: newWidgetHabit,
         graphType: newWidgetType,
         timeframe: newWidgetTimeframe,
+        size: newWidgetSize,
         createdAt: new Date().toISOString()
       })
     }
@@ -215,7 +218,7 @@ export default function StatisticsView() {
       {/* DASHBOARD WIDGETS HEADER */}
       <div className="flex items-center justify-between pt-4">
         <h2 className="text-lg font-semibold">Custom Dashboard</h2>
-        <Button size="sm" variant="outline" onClick={() => { setEditingWidget(null); setNewWidgetHabit(""); setNewWidgetType("mini-heatmap"); setNewWidgetTimeframe("1m"); setShowAddModal(true); }}>
+        <Button size="sm" variant="outline" onClick={() => { setEditingWidget(null); setNewWidgetHabit(""); setNewWidgetType("mini-heatmap"); setNewWidgetTimeframe("1m"); setNewWidgetSize("medium"); setShowAddModal(true); }}>
           <Plus className="mr-1 h-4 w-4" /> Add Graph
         </Button>
       </div>
@@ -245,6 +248,13 @@ export default function StatisticsView() {
               <label className="text-xs">Timeframe</label>
               <select className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm" value={newWidgetTimeframe} onChange={(e) => setNewWidgetTimeframe(e.target.value as Timeframe)}>
                 {TIMEFRAMES.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
+              </select>
+            </div>
+            <div className="grid gap-2">
+              <label className="text-xs">Widget Size</label>
+              <select className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm" value={newWidgetSize} onChange={(e) => setNewWidgetSize(e.target.value as WidgetSize)}>
+                <option value="medium">Medium (Full Row)</option>
+                <option value="small">Small (Half Row)</option>
               </select>
             </div>
             <div className="flex justify-end gap-2 pt-2">
@@ -299,6 +309,7 @@ export default function StatisticsView() {
               setNewWidgetHabit(widget.habitId)
               setNewWidgetType(widget.graphType)
               setNewWidgetTimeframe(widget.timeframe)
+              setNewWidgetSize(widget.size ?? "medium")
               setShowAddModal(true)
             }}
             onDelete={() => setWidgetToDelete(widget)}
@@ -404,8 +415,11 @@ interface ChartProps {
 }
 
 function MiniHeatmapRenderer({ dateCountMap, maxCount, weeksCount, today, size = "medium" }: ChartProps) {
+  // If small size and 1y (52 weeks), cap to 13 weeks (3 months) for readability
+  const effectiveWeeksCount = (size === "small" && weeksCount === 52) ? 13 : weeksCount
+
   const { weeks } = useMemo(() => {
-    const start = startOfWeek(subDays(today, weeksCount * 7 - 1))
+    const start = startOfWeek(subDays(today, effectiveWeeksCount * 7 - 1))
     const allDays = eachDayOfInterval({ start, end: today })
     const cols: string[][] = []
     let cur: string[] = []
@@ -418,10 +432,10 @@ function MiniHeatmapRenderer({ dateCountMap, maxCount, weeksCount, today, size =
       cols.push(cur)
     }
     return { weeks: cols }
-  }, [weeksCount, today])
+  }, [effectiveWeeksCount, today])
 
-  // 1 Year Layout (Original compact scrollable heatmap)
-  if (weeksCount === 52) {
+  // 1 Year Layout (Original compact scrollable heatmap for medium size)
+  if (effectiveWeeksCount === 52) {
     return (
       <div className="flex gap-[2px] overflow-x-auto pb-2 pt-4">
         {weeks.map((week: string[], wi: number) => (
@@ -438,15 +452,17 @@ function MiniHeatmapRenderer({ dateCountMap, maxCount, weeksCount, today, size =
   }
 
   // 1 Week Layout (7 circles on a single line)
-  if (weeksCount === 1) {
+  if (effectiveWeeksCount === 1) {
     const days = weeks.flat().filter(d => d !== "")
+    const circleSize = size === "small" ? "h-7 w-7" : "h-10 w-10"
+    const containerHeight = size === "small" ? "h-24" : "h-32"
     return (
-      <div className="flex h-32 w-full items-center justify-around pb-2 pt-4">
+      <div className={`flex ${containerHeight} w-full items-center justify-around pb-2 pt-4`}>
         {days.map((d, di) => (
-          <div key={di} className="flex flex-col items-center gap-2">
+          <div key={di} className="flex flex-col items-center gap-1.5">
             <div
               title={`${d}: ${dateCountMap.get(d) ?? 0}`}
-              className={`h-10 w-10 rounded-full transition-colors ${getIntensityClass(dateCountMap.get(d) ?? 0, maxCount)}`}
+              className={`${circleSize} rounded-full transition-colors ${getIntensityClass(dateCountMap.get(d) ?? 0, maxCount)}`}
             />
             <span className="text-[10px] text-muted-foreground">{format(new Date(d + "T00:00:00"), "EEE")}</span>
           </div>
@@ -527,3 +543,4 @@ function BarChartRenderer({ dateCountMap, maxCount, weeksCount, today, unit, siz
     </div>
   )
 }
+

@@ -10,30 +10,16 @@ import {
   isSameDay,
   addMonths,
   subMonths,
-  parseISO,
-  differenceInCalendarDays,
-  getDay,
 } from "date-fns"
 import { ChevronLeft, ChevronRight, CalendarDays } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { useAppStore } from "@/store"
-import type { Habit, Todo } from "@/types"
+import { isHabitDueOnDate } from "@/scheduler"
+import type { Todo } from "@/types"
 
 const WEEKDAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
-
-const isHabitDueOnDate = (habit: Habit, date: Date) => {
-  if (habit.recurrenceType === "interval") {
-    if (!habit.recurrenceStartDate || !habit.recurrenceInterval) return false
-    const start = parseISO(habit.recurrenceStartDate)
-    const diff = differenceInCalendarDays(date, start)
-    return diff >= 0 && diff % habit.recurrenceInterval === 0
-  }
-  // Default: weekdays
-  const dayOfWeek = getDay(date)
-  return habit.scheduledDays.includes(dayOfWeek)
-}
 
 const getTodoStatus = (todo: Todo, dateStr: string) => {
   if (todo.completed) return "completed"

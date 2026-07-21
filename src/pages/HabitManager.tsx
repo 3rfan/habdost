@@ -31,7 +31,7 @@ export default function HabitManager() {
   const [unit, setUnit] = useState("")
   const [scheduledDays, setScheduledDays] = useState<number[]>([])
 
-  const [recurrenceType, setRecurrenceType] = useState<"weekdays" | "interval">("weekdays")
+  const [recurrenceType, setRecurrenceType] = useState<"weekdays" | "interval" | "none">("weekdays")
   const [recurrenceInterval, setRecurrenceInterval] = useState(1)
   const [recurrenceStartDate, setRecurrenceStartDate] = useState(() => format(new Date(), "yyyy-MM-dd"))
 
@@ -181,8 +181,8 @@ export default function HabitManager() {
             )}
 
             <div className="space-y-2">
-              <Label>Repeat Pattern</Label>
-              <div className="flex gap-4">
+              <Label>Schedule</Label>
+              <div className="flex flex-col gap-2">
                 <label className="flex items-center gap-2 text-sm cursor-pointer">
                   <input
                     type="radio"
@@ -203,10 +203,21 @@ export default function HabitManager() {
                   />
                   Every N Days
                 </label>
+                <label className="flex items-center gap-2 text-sm cursor-pointer">
+                  <input
+                    type="radio"
+                    name="recurrence-type"
+                    value="none"
+                    checked={recurrenceType === "none"}
+                    onChange={() => setRecurrenceType("none")}
+                  />
+                  No Fixed Schedule
+                  <span className="text-xs text-muted-foreground">(add via #tag in My Day)</span>
+                </label>
               </div>
             </div>
 
-            {recurrenceType === "weekdays" ? (
+            {recurrenceType === "weekdays" && (
               <div className="space-y-2">
                 <Label>Repeat on</Label>
                 <div className="flex flex-wrap gap-2">
@@ -229,7 +240,9 @@ export default function HabitManager() {
                   })}
                 </div>
               </div>
-            ) : (
+            )}
+
+            {recurrenceType === "interval" && (
               <div className="flex gap-4">
                 <div className="flex-1 space-y-2">
                   <Label htmlFor="recurrence-interval">Every (days)</Label>
@@ -250,6 +263,16 @@ export default function HabitManager() {
                     onChange={(e) => setRecurrenceStartDate(e.target.value)}
                   />
                 </div>
+              </div>
+            )}
+
+            {recurrenceType === "none" && (
+              <div className="rounded-md border border-dashed border-muted-foreground/30 bg-muted/30 px-4 py-3">
+                <p className="text-xs text-muted-foreground">
+                  This habit won't appear automatically in My Day. Add it manually by typing{" "}
+                  <span className="font-mono font-semibold text-foreground">#{tag || "tag"}</span>{" "}
+                  in the todo input to log it on any day you like.
+                </p>
               </div>
             )}
 
@@ -301,9 +324,11 @@ export default function HabitManager() {
                     <p className="text-xs text-muted-foreground">
                       {habit.recurrenceType === "interval"
                         ? `Every ${habit.recurrenceInterval} days (starts ${habit.recurrenceStartDate})`
-                        : habit.scheduledDays
-                            .map((d) => DAYS.find((day) => day.value === d)?.label)
-                            .join(", ")}
+                        : habit.recurrenceType === "none"
+                          ? "No fixed schedule"
+                          : habit.scheduledDays
+                              .map((d) => DAYS.find((day) => day.value === d)?.label)
+                              .join(", ")}
                     </p>
                     {habit.type === "numeric" && (
                       <p className="text-xs font-medium text-emerald-600 dark:text-emerald-400">

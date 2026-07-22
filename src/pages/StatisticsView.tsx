@@ -493,22 +493,37 @@ function MiniHeatmapRenderer({ dateCountMap, maxCount, weeksCount, today, size =
     )
   }
 
-  // 1 Week Layout (7 circles on a single line)
+  // 1 Week Layout (2 rows: 4 dots top, 3 dots bottom centered)
   if (effectiveWeeksCount === 1) {
-    const days = weeks.flat().filter(d => d !== "")
-    const circleSize = size === "small" ? "h-7 w-7" : "h-10 w-10"
-    const containerHeight = size === "small" ? "h-24" : "h-32"
+    const days = weeks.flat().filter((d) => d !== "")
+    const topRow = days.slice(0, 4)
+    const bottomRow = days.slice(4, 7)
+    const circleSize = size === "small" ? "h-6 w-6 sm:h-7 sm:w-7" : "h-8 w-8 sm:h-9 sm:w-9"
+    const containerHeight = size === "small" ? "h-28 sm:h-32" : "h-32 sm:h-40"
+
+    const renderDayDot = (d: string, di: number) => {
+      const count = dateCountMap.get(d) ?? 0
+      const customStyle = count > 0 ? getCustomIntensityStyle(count, maxCount, color) : {}
+      return (
+        <div key={di} className="flex flex-col items-center gap-1">
+          <div
+            title={`${d}: ${count}`}
+            style={customStyle}
+            className={`${circleSize} rounded-full transition-colors ${count === 0 ? "bg-muted" : color ? "" : getIntensityClass(count, maxCount)}`}
+          />
+          <span className="text-[10px] text-muted-foreground">{format(new Date(d + "T00:00:00"), "EEE")}</span>
+        </div>
+      )
+    }
+
     return (
-      <div className={`flex ${containerHeight} w-full items-center justify-around pb-2 pt-4`}>
-        {days.map((d, di) => (
-          <div key={di} className="flex flex-col items-center gap-1.5">
-            <div
-              title={`${d}: ${dateCountMap.get(d) ?? 0}`}
-              className={`${circleSize} rounded-full transition-colors ${getIntensityClass(dateCountMap.get(d) ?? 0, maxCount)}`}
-            />
-            <span className="text-[10px] text-muted-foreground">{format(new Date(d + "T00:00:00"), "EEE")}</span>
-          </div>
-        ))}
+      <div className={`flex ${containerHeight} w-full flex-col justify-center gap-3 pb-2 pt-2`}>
+        <div className="flex w-full items-center justify-around px-2">
+          {topRow.map((d, di) => renderDayDot(d, di))}
+        </div>
+        <div className="flex w-full items-center justify-center gap-6 sm:gap-10">
+          {bottomRow.map((d, di) => renderDayDot(d, di + 4))}
+        </div>
       </div>
     )
   }

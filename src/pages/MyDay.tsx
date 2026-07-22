@@ -18,10 +18,10 @@ import {
   useSortable,
 } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
-import { Star, GripVertical, Undo2 } from "lucide-react"
+import { Star, GripVertical, Undo2, Check, X, Pencil } from "lucide-react"
 
 import { Checkbox } from "@/components/ui/checkbox"
-import TodoInput from "@/components/TodoInput"
+import TodoInput, { extractTags, buildTodoTitle, findLinkedHabit } from "@/components/TodoInput"
 import SwipeableTodoItem from "@/components/SwipeableTodoItem"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -33,6 +33,7 @@ function SortableTodoItem({
   todo,
   handleToggle,
   handleStarToggle,
+  handleUpdateTodoText,
   habits,
   onDelete,
   disabledSwipe,
@@ -40,6 +41,7 @@ function SortableTodoItem({
   todo: Todo
   handleToggle: (todoId: string, checked: boolean) => Promise<void>
   handleStarToggle: (todoId: string) => Promise<void>
+  handleUpdateTodoText: (todoId: string, newText: string) => Promise<void>
   habits: Habit[]
   onDelete: () => void
   disabledSwipe?: boolean
@@ -53,65 +55,146 @@ function SortableTodoItem({
     isDragging,
   } = useSortable({ id: todo.id })
 
+  const [isEditing, setIsEditing] = useState(false)
+  const [editText, setEditText] = useState("")
+
+  const habit = todo.linkedHabitId ? habits.find((h) => h.id === todo.linkedHabitId) : undefined
+
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
     opacity: isDragging ? 0 : 1,
   }
 
-  const habit = todo.linkedHabitId ? habits.find((h) => h.id === todo.linkedHabitId) : undefined
+  const handleStartEdit = () => {
+    const initialText = habit ? `${todo.title} #${habit.tag}` : todo.title
+    setEditText(initialText)
+    setIsEditing(true)
+  }
+
+  const handleSaveEdit = async () => {
+    if (editText.trim()) {
+      await handleUpdateTodoText(todo.id, editText)
+    }
+    setIsEditing(false)
+  }
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      e.preventDefault()
+      void handleSaveEdit()
+    } else if (e.key === "Escape") {
+      setIsEditing(false)
+    }
+  }
 
   return (
     <li ref={setNodeRef} style={style}>
-      <SwipeableTodoItem onDelete={onDelete} disabled={disabledSwipe}>
-        <div className="flex items-center gap-3 rounded-md border bg-card p-3 shadow-sm select-none touch-pan-y">
-          <button
-            type="button"
-            className="cursor-grab p-1 text-muted-foreground hover:text-foreground active:cursor-grabbing touch-none select-none"
-            {...attributes}
-            {...listeners}
-          >
-            <GripVertical className="h-4 w-4" />
-          </button>
-          <Checkbox
-            checked={todo.completed}
-            onCheckedChange={async (checked) => {
-              await handleToggle(todo.id, checked === true)
-            }}
-          />
-          <div className="flex-1 min-w-0 space-y-1">
-            <p
-              className={
-                todo.completed
-                  ? "text-sm text-muted-foreground line-through truncate flex items-center gap-1.5"
-                  : "text-sm text-card-foreground truncate flex items-center gap-1.5"
-              }
+      <SwipeableTodoItem onDelete={onDelete} disabled={disabledSwipe || isEditing}>
+        <div className="flex flex-col rounded-md border bg-card p-3 shadow-sm select-none touch-pan-y transition-all">
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              className="cursor-grab p-1 text-muted-foreground hover:text-foreground active:cursor-grabbing touch-none select-none shrink-0"
+              {...attributes}
+              {...listeners}
             >
-              {habit && (
-                <span
-                  className="inline-block h-2.5 w-2.5 rounded-full shrink-0 border border-black/10 dark:border-white/10 shadow-xs"
-                  style={{ backgroundColor: habit.color || "#10b981" }}
-                  title={`Linked to habit: ${habit.name}`}
-                />
-              )}
-              {habit?.emoji && <span className="mr-0.5">{habit.emoji}</span>}
-              {todo.title}
-            </p>
-            {todo.linkedHabitId ? (
-              <p className="text-xs text-muted-foreground">Linked to habit</p>
-            ) : null}
+              <GripVertical className="h-4 w-4" />
+            </button>
+            <Checkbox
+              checked={todo.completed}
+              onCheckedChange={async (checked) => {
+                await handleToggle(todo.id, checked === true)
+              }}
+            />
+            <div
+              className="flex-1 min-w-0 space-y-1 cursor-pointer group"
+              onClick={() => {
+                if (!isEditing) handleStartEdit()
+              }}
+            >
+              <p
+                className={
+                  todo.completed
+                    ? "text-sm text-muted-foreground line-through truncate flex items-center gap-1.5"
+                    : "text-sm text-card-foreground truncate flex items-center gap-1.5"
+                }
+              >
+                {habit && (
+                  <span
+                    className="inline-block h-2.5 w-2.5 rounded-full shrink-0 border border-black/10 dark:border-white/10 shadow-xs"
+                    style={{ backgroundColor: habit.color || "#10b981" }}
+                    title={`Linked to habit: ${habit.name}`}
+                  />
+                )}
+                {habit?.emoji && <span className="mr-0.5">{habit.emoji}</span>}
+                <span className="group-hover:underline">{todo.title}</span>
+                {habit && (
+                  <span className="font-mono text-xs text-primary/80 font-medium shrink-0">
+                    #{habit.tag}
+                  </span>
+                )}
+              </p>
+              {todo.linkedHabitId ? (
+                <p className="text-xs text-muted-foreground">Linked to habit</p>
+              ) : null}
+            </div>
+            <button
+              type="button"
+              onClick={handleStartEdit}
+              title="Edit task"
+              className="p-1 text-muted-foreground hover:text-foreground transition-colors shrink-0"
+            >
+              <Pencil className="h-3.5 w-3.5" />
+            </button>
+            <button
+              type="button"
+              onClick={() => handleStarToggle(todo.id)}
+              className={`p-1 transition-colors shrink-0 ${
+                todo.starred
+                  ? "text-yellow-500 hover:text-yellow-600"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              <Star className="h-4 w-4" fill={todo.starred ? "currentColor" : "none"} />
+            </button>
           </div>
-          <button
-            type="button"
-            onClick={() => handleStarToggle(todo.id)}
-            className={`p-1 transition-colors ${
-              todo.starred
-                ? "text-yellow-500 hover:text-yellow-600"
-                : "text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            <Star className="h-4 w-4" fill={todo.starred ? "currentColor" : "none"} />
-          </button>
+
+          {/* EXPANDABLE EDIT BOX */}
+          {isEditing && (
+            <div
+              className="mt-3 pt-3 border-t flex flex-col gap-2 animate-in fade-in slide-in-from-top-1 duration-150"
+              onPointerDown={(e) => e.stopPropagation()}
+              onMouseDown={(e) => e.stopPropagation()}
+              onTouchStart={(e) => e.stopPropagation()}
+            >
+              <Input
+                autoFocus
+                value={editText}
+                onChange={(e) => setEditText(e.target.value)}
+                onKeyDown={handleKeyDown}
+                placeholder="Task title or #habit tag"
+                className="text-sm h-9"
+              />
+              <div className="flex justify-end gap-1.5 pt-1">
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="h-7 text-xs px-2.5"
+                  onClick={() => setIsEditing(false)}
+                >
+                  <X className="mr-1 h-3 w-3" /> Cancel
+                </Button>
+                <Button
+                  size="sm"
+                  className="h-7 text-xs px-2.5"
+                  onClick={() => void handleSaveEdit()}
+                >
+                  <Check className="mr-1 h-3 w-3" /> Save
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
       </SwipeableTodoItem>
     </li>
@@ -351,10 +434,26 @@ export default function MyDay() {
     }
 
     const todo = todaysTodos.find((t) => t.id === numericPrompt.todoId)
-    if (todo) {
-      await performToggle(todo, true, parsed)
-    }
     setNumericPrompt(null)
+  }
+
+  const handleUpdateTodoText = async (todoId: string, newText: string) => {
+    const todo = todaysTodos.find((t) => t.id === todoId) || todos.find((t) => t.id === todoId)
+    if (!todo) return
+
+    const trimmed = newText.trim()
+    if (!trimmed) return
+
+    const tags = extractTags(trimmed)
+    const newLinkedHabit = findLinkedHabit(tags, habits)
+    const cleanTitle = buildTodoTitle(trimmed) || trimmed
+
+    await updateTodo({
+      ...todo,
+      title: cleanTitle,
+      linkedHabitId: newLinkedHabit?.id ?? null,
+      updatedAt: today,
+    })
   }
 
   if (isLoading) {
@@ -438,6 +537,7 @@ export default function MyDay() {
                           todo={todo}
                           handleToggle={handleToggle}
                           handleStarToggle={handleStarToggle}
+                          handleUpdateTodoText={handleUpdateTodoText}
                           habits={habits}
                           onDelete={() => setTodoToDeleteConfirm(todo)}
                           disabledSwipe={activeId !== null}
@@ -470,6 +570,7 @@ export default function MyDay() {
                           todo={todo}
                           handleToggle={handleToggle}
                           handleStarToggle={handleStarToggle}
+                          handleUpdateTodoText={handleUpdateTodoText}
                           habits={habits}
                           onDelete={() => setTodoToDeleteConfirm(todo)}
                           disabledSwipe={activeId !== null}

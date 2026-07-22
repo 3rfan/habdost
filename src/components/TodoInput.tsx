@@ -5,22 +5,22 @@ import { CalendarDays, X } from "lucide-react"
 import { useAppStore } from "@/store"
 import type { Habit, Todo } from "@/types"
 
-const hashtagRegex = /#[a-zA-Z0-9_]+/g
+export const hashtagRegex = /#[a-zA-Z0-9_]+/g
 
-function normalizeTag(tag: string) {
+export function normalizeTag(tag: string) {
   return tag.trim().toLowerCase()
 }
 
-function extractTags(text: string) {
+export function extractTags(text: string) {
   const matches = text.match(hashtagRegex) ?? []
   return matches.map((match) => normalizeTag(match.slice(1)))
 }
 
-function buildTodoTitle(text: string) {
+export function buildTodoTitle(text: string) {
   return text.replace(hashtagRegex, " ").replace(/\s+/g, " ").trim()
 }
 
-function findLinkedHabit(tags: string[], habits: Habit[]) {
+export function findLinkedHabit(tags: string[], habits: Habit[]) {
   const tagSet = new Set(tags)
   return habits.find((habit) => tagSet.has(normalizeTag(habit.tag))) ?? null
 }

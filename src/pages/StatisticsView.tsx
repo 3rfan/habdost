@@ -426,11 +426,6 @@ function WidgetRenderer({
             {habit.emoji && <span className="mr-0.5">{habit.emoji}</span>}
             #{habit.tag}
           </span>
-          {isSmall && (
-            <span className="text-[9px] sm:text-[10px] font-normal uppercase tracking-wider text-muted-foreground border rounded px-1 py-0.5 shrink-0 ml-1">
-              Small
-            </span>
-          )}
         </CardTitle>
         <p className="text-[10px] sm:text-xs text-muted-foreground capitalize truncate">
           {widget.graphType.replace("-", " ")} • {TIMEFRAMES.find((t) => t.value === widget.timeframe)?.label}

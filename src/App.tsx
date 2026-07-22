@@ -126,7 +126,7 @@ function App() {
 
       <nav
         ref={navRef}
-        className={`fixed inset-x-0 bottom-0 z-10 border-t bg-background/90 backdrop-blur pb-[env(safe-area-inset-bottom,0px)] ${
+        className={`fixed inset-x-0 bottom-0 z-10 border-t bg-background/90 backdrop-blur pb-[env(safe-area-inset-bottom,0px)] transition-transform duration-300 ease-in-out ${
           isNavVisible ? "translate-y-0" : "translate-y-full"
         }`}
       >

@@ -14,7 +14,7 @@ import { useAppStore } from "@/store"
 import type { Timeframe, GraphType, StatisticsWidget, Habit, WidgetSize } from "@/types"
 
 
-const WEEKDAY_LABELS = ["", "Mon", "", "Wed", "", "Fri", ""]
+const WEEKDAY_LABELS = ["Mon", "", "Wed", "", "Fri", "", "Sun"]
 
 const TIMEFRAMES: { label: string; value: Timeframe; weeks: number }[] = [
   { label: "1 Week", value: "1w", weeks: 1 },
@@ -98,12 +98,12 @@ export default function StatisticsView() {
   const { weeks, monthLabels } = useMemo(() => {
     const weeksCount = TIMEFRAMES.find((t) => t.value === mainTimeframe)?.weeks || 52
     const today = new Date()
-    const start = startOfWeek(subDays(today, weeksCount * 7 - 1))
+    const start = startOfWeek(subDays(today, weeksCount * 7 - 1), { weekStartsOn: 1 })
     const allDays = eachDayOfInterval({ start, end: today })
     const cols: string[][] = []
     let cur: string[] = []
     for (const day of allDays) {
-      if (getDay(day) === 0 && cur.length > 0) { cols.push(cur); cur = [] }
+      if (getDay(day) === 1 && cur.length > 0) { cols.push(cur); cur = [] }
       cur.push(format(day, "yyyy-MM-dd"))
     }
     if (cur.length > 0) {
@@ -461,12 +461,12 @@ function MiniHeatmapRenderer({ dateCountMap, maxCount, weeksCount, today, size =
   // If small size and 1y (52 weeks), cap to 13 weeks (3 months) for readability
   const effectiveWeeksCount = (size === "small" && weeksCount === 52) ? 13 : weeksCount
   const { weeks } = useMemo(() => {
-    const start = startOfWeek(subDays(today, effectiveWeeksCount * 7 - 1))
+    const start = startOfWeek(subDays(today, effectiveWeeksCount * 7 - 1), { weekStartsOn: 1 })
     const allDays = eachDayOfInterval({ start, end: today })
     const cols: string[][] = []
     let cur: string[] = []
     for (const day of allDays) {
-      if (getDay(day) === 0 && cur.length > 0) { cols.push(cur); cur = [] }
+      if (getDay(day) === 1 && cur.length > 0) { cols.push(cur); cur = [] }
       cur.push(format(day, "yyyy-MM-dd"))
     }
     if (cur.length > 0) {
@@ -493,9 +493,9 @@ function MiniHeatmapRenderer({ dateCountMap, maxCount, weeksCount, today, size =
     )
   }
 
-  // 1 Week Layout (2 rows for small size, 1 single row for medium size)
+  // 1 Week Layout (2 rows for small size, 1 single row for medium size; exact 7 days)
   if (effectiveWeeksCount === 1) {
-    const days = weeks.flat().filter((d) => d !== "")
+    const days = eachDayOfInterval({ start: subDays(today, 6), end: today }).map((d) => format(d, "yyyy-MM-dd"))
 
     if (size === "small") {
       const topRow = days.slice(0, 4)

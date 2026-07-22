@@ -725,19 +725,21 @@ function MiniHeatmapRenderer({ dateCountMap, maxCount, weeksCount, today, size =
 
 function BarChartRenderer({ dateCountMap, maxCount, weeksCount, today, unit, size = "medium", color }: ChartProps) {
   const bars = useMemo(() => {
-    const days = weeksCount * 7
+    const days = weeksCount === 1 ? 7 : weeksCount * 7
     const start = subDays(today, days - 1)
     const allDays = eachDayOfInterval({ start, end: today })
 
-    return allDays.map(d => {
+    return allDays.map((d, index) => {
       const dateStr = format(d, "yyyy-MM-dd")
       const val = dateCountMap.get(dateStr) ?? 0
       const height = maxCount > 0 ? (val / maxCount) * 100 : 0
+      const isToday = weeksCount === 1 && index === allDays.length - 1
       return {
         dateStr,
         label: weeksCount === 1 ? format(d, "EEE") : format(d, "d MMM"),
         val,
-        height: Math.max(height, val > 0 ? 5 : 0)
+        height: Math.max(height, val > 0 ? 5 : 0),
+        isToday,
       }
     })
   }, [dateCountMap, maxCount, weeksCount, today])
@@ -754,14 +756,20 @@ function BarChartRenderer({ dateCountMap, maxCount, weeksCount, today, unit, siz
           </div>
           <div className="flex w-full flex-1 items-end justify-center">
             <div
-              className="w-full max-w-[24px] rounded-t-sm transition-all hover:opacity-80"
+              className={`w-full max-w-[24px] rounded-t-sm transition-all hover:opacity-80 ${
+                b.isToday ? "ring-2 ring-primary ring-offset-1 dark:ring-offset-card" : ""
+              }`}
               style={{
                 height: `${b.height}%`,
                 backgroundColor: color || "var(--color-primary)"
               }}
             />
           </div>
-          <span className="mt-1 whitespace-nowrap text-[10px] text-muted-foreground">{b.label}</span>
+          <span className={`mt-1 whitespace-nowrap text-[10px] ${
+            b.isToday ? "font-bold text-primary" : "text-muted-foreground"
+          }`}>
+            {b.label}
+          </span>
         </div>
       ))}
     </div>

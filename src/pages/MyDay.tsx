@@ -136,9 +136,6 @@ function SortableTodoItem({
                   </span>
                 )}
               </p>
-              {todo.linkedHabitId ? (
-                <p className="text-xs text-muted-foreground">Linked to habit</p>
-              ) : null}
             </div>
             <button
               type="button"
@@ -612,9 +609,6 @@ export default function MyDay() {
                         {activeHabit?.emoji && <span className="mr-0.5">{activeHabit.emoji}</span>}
                         {activeTodo.title}
                       </p>
-                      {activeTodo.linkedHabitId && (
-                        <p className="text-xs text-muted-foreground">Linked to habit</p>
-                      )}
                     </div>
                     <Star
                       className="h-4 w-4 p-0"

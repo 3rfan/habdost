@@ -225,11 +225,6 @@ export default function CalendarView() {
                             {habit?.emoji && <span className="mr-1.5">{habit.emoji}</span>}
                             {todo.title}
                           </p>
-                          {todo.linkedHabitId && (
-                            <span className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground shrink-0">
-                              habit
-                            </span>
-                          )}
                         </div>
                         {status === "missed" && (
                           <span className="text-[10px] font-semibold text-amber-500 uppercase tracking-wider shrink-0">
@@ -252,9 +247,6 @@ export default function CalendarView() {
                     <div className="flex items-center gap-2">
                       <span className="text-xs text-green-500">●</span>
                       <p className="text-sm">{getHabitDisplay(log.habitId)}</p>
-                      <span className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
-                        habit log
-                      </span>
                     </div>
                   </CardContent>
                 </Card>
@@ -280,9 +272,6 @@ export default function CalendarView() {
                             {habit.emoji && <span className="mr-1.5">{habit.emoji}</span>}
                             {habit.name}
                           </p>
-                          <span className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground shrink-0">
-                            habit
-                          </span>
                         </div>
                         <span className={`text-[10px] font-semibold uppercase tracking-wider shrink-0 ${
                           isPast ? "text-amber-500" : "text-blue-500"

@@ -3,6 +3,7 @@ import { create } from "zustand"
 import type { Habit, HabitLog, Id, StatisticsWidget, Todo } from "@/types"
 import {
   addHabit,
+  updateHabit as updateHabitDb,
   addHabitLog,
   addTodo,
   addWidget,
@@ -27,6 +28,7 @@ interface AppState {
   isLoading: boolean
   loadAll: () => Promise<void>
   addHabit: (habit: Habit) => Promise<void>
+  updateHabit: (habit: Habit) => Promise<void>
   deleteHabit: (id: Id) => Promise<void>
   addTodo: (todo: Todo) => Promise<void>
   updateTodo: (todo: Todo) => Promise<void>
@@ -59,6 +61,10 @@ export const useAppStore = create<AppState>((set, get) => ({
   addHabit: async (habit) => {
     await addHabit(habit)
     set({ habits: [...get().habits, habit] })
+  },
+  updateHabit: async (habit) => {
+    await updateHabitDb(habit)
+    set({ habits: get().habits.map((h) => (h.id === habit.id ? habit : h)) })
   },
   deleteHabit: async (id) => {
     await deleteHabit(id)

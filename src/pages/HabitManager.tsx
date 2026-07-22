@@ -9,7 +9,7 @@ import { Select } from "@/components/ui/select"
 import { useAppStore } from "@/store"
 import { generateRecurringTodos } from "@/scheduler"
 import type { Habit } from "@/types"
-import { Trash2, Plus, Repeat, ChevronDown, ChevronUp } from "lucide-react"
+import { Trash2, Plus, Repeat, ChevronDown, ChevronUp, Pencil } from "lucide-react"
 
 const DAYS = [
   { label: "Mon", value: 1 },
@@ -36,10 +36,12 @@ const PRESET_COLORS = [
 export default function HabitManager() {
   const habits = useAppStore((state) => state.habits)
   const addHabit = useAppStore((state) => state.addHabit)
+  const updateHabit = useAppStore((state) => state.updateHabit)
   const addTodo = useAppStore((state) => state.addTodo)
   const deleteHabit = useAppStore((state) => state.deleteHabit)
 
   const [isFormOpen, setIsFormOpen] = useState(false)
+  const [editingHabitId, setEditingHabitId] = useState<string | null>(null)
   const [showCancelModal, setShowCancelModal] = useState(false)
   const [habitToDelete, setHabitToDelete] = useState<Habit | null>(null)
 
@@ -56,6 +58,7 @@ export default function HabitManager() {
   const [recurrenceStartDate, setRecurrenceStartDate] = useState(() => format(new Date(), "yyyy-MM-dd"))
 
   const resetForm = () => {
+    setEditingHabitId(null)
     setName("")
     setTag("")
     setEmoji("")
@@ -66,6 +69,21 @@ export default function HabitManager() {
     setRecurrenceType("weekdays")
     setRecurrenceInterval(1)
     setRecurrenceStartDate(format(new Date(), "yyyy-MM-dd"))
+  }
+
+  const handleStartEdit = (habit: Habit) => {
+    setEditingHabitId(habit.id)
+    setName(habit.name)
+    setTag(habit.tag)
+    setEmoji(habit.emoji || "")
+    setColor(habit.color || "#10b981")
+    setType(habit.type || "boolean")
+    setUnit(habit.unit || "")
+    setScheduledDays(habit.scheduledDays || [])
+    setRecurrenceType(habit.recurrenceType || "weekdays")
+    setRecurrenceInterval(habit.recurrenceInterval || 1)
+    setRecurrenceStartDate(habit.recurrenceStartDate || format(new Date(), "yyyy-MM-dd"))
+    setIsFormOpen(true)
   }
 
   const toggleDay = (day: number) => {
@@ -112,33 +130,60 @@ export default function HabitManager() {
       return
     }
 
-    if (habits.some((h) => h.tag === trimmedTag)) {
+    if (!editingHabitId && habits.some((h) => h.tag === trimmedTag)) {
       alert("A habit with this tag already exists!")
       return
     }
 
-    const habit: Habit = {
-      id: crypto.randomUUID(),
-      name: trimmedName,
-      tag: trimmedTag,
-      type: type,
-      unit: type === "numeric" ? unit.trim() : undefined,
-      emoji: emojiSpanned.join("") || undefined,
-      color: color.trim() || "#10b981",
-      recurrenceType,
-      recurrenceInterval: recurrenceType === "interval" ? recurrenceInterval : undefined,
-      recurrenceStartDate: recurrenceType === "interval" ? recurrenceStartDate : undefined,
-      scheduledDays: recurrenceType === "weekdays" ? [...scheduledDays].sort() : [],
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    }
+    if (editingHabitId) {
+      const existing = habits.find((h) => h.id === editingHabitId)
+      if (existing) {
+        const updatedHabit: Habit = {
+          ...existing,
+          name: trimmedName,
+          type,
+          unit: type === "numeric" ? unit.trim() : undefined,
+          emoji: emojiSpanned.join("") || undefined,
+          color: color.trim() || "#10b981",
+          recurrenceType,
+          recurrenceInterval: recurrenceType === "interval" ? recurrenceInterval : undefined,
+          recurrenceStartDate: recurrenceType === "interval" ? recurrenceStartDate : undefined,
+          scheduledDays: recurrenceType === "weekdays" ? [...scheduledDays].sort() : [],
+          updatedAt: new Date().toISOString(),
+        }
 
-    await addHabit(habit)
+        await updateHabit(updatedHabit)
 
-    const currentTodos = useAppStore.getState().todos
-    const newTodos = generateRecurringTodos([habit], currentTodos)
-    for (const todo of newTodos) {
-      await addTodo(todo)
+        const currentTodos = useAppStore.getState().todos
+        const newTodos = generateRecurringTodos([updatedHabit], currentTodos)
+        for (const todo of newTodos) {
+          await addTodo(todo)
+        }
+      }
+    } else {
+      const habit: Habit = {
+        id: crypto.randomUUID(),
+        name: trimmedName,
+        tag: trimmedTag,
+        type: type,
+        unit: type === "numeric" ? unit.trim() : undefined,
+        emoji: emojiSpanned.join("") || undefined,
+        color: color.trim() || "#10b981",
+        recurrenceType,
+        recurrenceInterval: recurrenceType === "interval" ? recurrenceInterval : undefined,
+        recurrenceStartDate: recurrenceType === "interval" ? recurrenceStartDate : undefined,
+        scheduledDays: recurrenceType === "weekdays" ? [...scheduledDays].sort() : [],
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      }
+
+      await addHabit(habit)
+
+      const currentTodos = useAppStore.getState().todos
+      const newTodos = generateRecurringTodos([habit], currentTodos)
+      for (const todo of newTodos) {
+        await addTodo(todo)
+      }
     }
 
     resetForm()
@@ -209,8 +254,8 @@ export default function HabitManager() {
         >
           <div className="flex items-center justify-between">
             <CardTitle className="flex items-center gap-2 text-base">
-              <Plus className="h-4 w-4" />
-              New Habit
+              {editingHabitId ? <Pencil className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
+              {editingHabitId ? "Edit Habit" : "New Habit"}
             </CardTitle>
             <div className="flex items-center gap-2">
               <span className="text-xs text-muted-foreground font-normal">
@@ -249,7 +294,11 @@ export default function HabitManager() {
                     value={tag}
                     onChange={(e) => setTag(e.target.value)}
                     placeholder="e.g. gym"
+                    disabled={!!editingHabitId}
                   />
+                  {editingHabitId && (
+                    <p className="text-[10px] text-muted-foreground">Tag cannot be changed to maintain database consistency.</p>
+                  )}
                 </div>
 
                 <div className="space-y-2">
@@ -407,7 +456,7 @@ export default function HabitManager() {
                       (recurrenceType === "interval" && (!recurrenceInterval || recurrenceInterval < 1))
                     }
                   >
-                    Create Habit
+                    {editingHabitId ? "Update Habit" : "Create Habit"}
                   </Button>
                 </div>
               </form>
@@ -464,14 +513,26 @@ export default function HabitManager() {
                       </p>
                     )}
                   </div>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => setHabitToDelete(habit)}
-                    className="text-muted-foreground hover:text-destructive"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
+                  <div className="flex items-center gap-1">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleStartEdit(habit)}
+                      className="text-muted-foreground hover:text-foreground"
+                      title="Edit habit"
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => setHabitToDelete(habit)}
+                      className="text-muted-foreground hover:text-destructive"
+                      title="Delete habit"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </CardContent>
               </Card>
             ))}

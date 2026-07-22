@@ -86,6 +86,15 @@ export async function addHabit(habit: Habit) {
   }
 }
 
+export async function updateHabit(habit: Habit) {
+  try {
+    const db = await getDb()
+    await db.put("habits", habit)
+  } catch (error) {
+    console.error("Failed to update habit", error)
+  }
+}
+
 export async function deleteHabit(id: Id) {
   try {
     const db = await getDb()

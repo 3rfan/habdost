@@ -434,6 +434,9 @@ export default function MyDay() {
     }
 
     const todo = todaysTodos.find((t) => t.id === numericPrompt.todoId)
+    if (todo) {
+      await performToggle(todo, true, parsed)
+    }
     setNumericPrompt(null)
   }
 

@@ -250,7 +250,7 @@ export default function HabitManager() {
       <Card>
         <CardHeader
           onClick={() => setIsFormOpen((prev) => !prev)}
-          className="cursor-pointer select-none transition-colors hover:bg-accent/50 rounded-lg p-4"
+          className="cursor-pointer select-none transition-colors hover:bg-accent/50 rounded-t-xl py-1.5 px-4"
         >
           <div className="flex items-center justify-between">
             <CardTitle className="flex items-center gap-2 text-base">
@@ -275,7 +275,7 @@ export default function HabitManager() {
           }`}
         >
           <div className="overflow-hidden">
-            <CardContent className="pt-2">
+            <CardContent className="pt-3">
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="habit-name">Habit Name</Label>

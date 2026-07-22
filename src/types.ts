@@ -48,6 +48,7 @@ export interface StatisticsWidget {
   graphType: GraphType
   timeframe: Timeframe
   size?: WidgetSize
+  sortOrder?: number
   createdAt: string
 }
 

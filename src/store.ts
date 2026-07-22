@@ -18,6 +18,7 @@ import {
   getAllWidgets,
   updateTodo,
   reorderTodos as reorderTodosDb,
+  reorderWidgets as reorderWidgetsDb,
 } from "@/db"
 
 interface AppState {
@@ -39,6 +40,7 @@ interface AppState {
   addWidget: (widget: StatisticsWidget) => Promise<void>
   updateWidget: (widget: StatisticsWidget) => Promise<void>
   deleteWidget: (id: Id) => Promise<void>
+  reorderWidgets: (orderedIds: string[]) => Promise<void>
   clearAll: () => Promise<void>
 }
 
@@ -50,13 +52,14 @@ export const useAppStore = create<AppState>((set, get) => ({
   isLoading: false,
   loadAll: async () => {
     set({ isLoading: true })
-    const [habits, todos, logs, widgets] = await Promise.all([
+    const [habits, todos, logs, rawWidgets] = await Promise.all([
       getAllHabits(),
       getAllTodos(),
       getAllHabitLogs(),
       getAllWidgets(),
     ])
-    set({ habits, todos, logs, widgets, isLoading: false })
+    const sortedWidgets = rawWidgets.sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
+    set({ habits, todos, logs, widgets: sortedWidgets, isLoading: false })
   },
   addHabit: async (habit) => {
     await addHabit(habit)
@@ -120,6 +123,25 @@ export const useAppStore = create<AppState>((set, get) => ({
   deleteWidget: async (id) => {
     await deleteWidget(id)
     set({ widgets: get().widgets.filter((w) => w.id !== id) })
+  },
+  reorderWidgets: async (orderedIds) => {
+    const currentWidgets = get().widgets
+    const idMap = new Map(orderedIds.map((id, index) => [id, index * 10]))
+    
+    const updatedWidgets: StatisticsWidget[] = []
+    const newStoreWidgets = currentWidgets.map((w) => {
+      if (idMap.has(w.id)) {
+        const newW = { ...w, sortOrder: idMap.get(w.id) }
+        updatedWidgets.push(newW)
+        return newW
+      }
+      return w
+    }).sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
+
+    if (updatedWidgets.length > 0) {
+      await reorderWidgetsDb(updatedWidgets)
+    }
+    set({ widgets: newStoreWidgets })
   },
   clearAll: async () => {
     await clearDatabase()

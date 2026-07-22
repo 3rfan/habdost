@@ -247,6 +247,19 @@ export async function deleteWidget(id: Id) {
   }
 }
 
+export async function reorderWidgets(widgets: StatisticsWidget[]) {
+  try {
+    const db = await getDb()
+    const tx = db.transaction("statistics_widgets", "readwrite")
+    await Promise.all([
+      ...widgets.map((w) => tx.store.put(w)),
+      tx.done,
+    ])
+  } catch (error) {
+    console.error("Failed to reorder widgets", error)
+  }
+}
+
 export async function reorderTodos(todos: Todo[]) {
   try {
     const db = await getDb()

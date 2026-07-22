@@ -6,7 +6,23 @@ import {
   eachDayOfInterval,
   getDay,
 } from "date-fns"
-import { Flame, Plus, Trash2, Pencil } from "lucide-react"
+import {
+  DndContext,
+  closestCenter,
+  PointerSensor,
+  TouchSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core"
+import {
+  SortableContext,
+  rectSortingStrategy,
+  useSortable,
+  arrayMove,
+} from "@dnd-kit/sortable"
+import { CSS } from "@dnd-kit/utilities"
+import { Flame, Plus, Trash2, Pencil, GripVertical, Check } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -64,9 +80,27 @@ export default function StatisticsView() {
   const addWidget = useAppStore((s) => s.addWidget)
   const updateWidget = useAppStore((s) => s.updateWidget)
   const deleteWidget = useAppStore((s) => s.deleteWidget)
+  const reorderWidgets = useAppStore((s) => s.reorderWidgets)
 
   const [mainTimeframe, setMainTimeframe] = useState<Timeframe>("1y")
   const [selectedHabitId, setSelectedHabitId] = useState<string | null>(null)
+  const [isRearrangeMode, setIsRearrangeMode] = useState(false)
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 150, tolerance: 5 } })
+  )
+
+  const handleDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event
+    if (!over || active.id === over.id) return
+    const oldIndex = widgets.findIndex((w) => w.id === active.id)
+    const newIndex = widgets.findIndex((w) => w.id === over.id)
+    if (oldIndex !== -1 && newIndex !== -1) {
+      const reordered = arrayMove(widgets, oldIndex, newIndex)
+      await reorderWidgets(reordered.map((w) => w.id))
+    }
+  }
 
   const [showAddModal, setShowAddModal] = useState(false)
   const [editingWidget, setEditingWidget] = useState<StatisticsWidget | null>(null)
@@ -257,9 +291,40 @@ export default function StatisticsView() {
       {/* DASHBOARD WIDGETS HEADER */}
       <div className="flex items-center justify-between pt-4">
         <h2 className="text-lg font-semibold">Custom Dashboard</h2>
-        <Button size="sm" variant="outline" onClick={() => { setEditingWidget(null); setNewWidgetHabit(""); setNewWidgetType("mini-heatmap"); setNewWidgetTimeframe("1m"); setNewWidgetSize("medium"); setShowAddModal(true); }}>
-          <Plus className="mr-1 h-4 w-4" /> Add Graph
-        </Button>
+        <div className="flex items-center gap-2">
+          {widgets.length > 0 && (
+            <Button
+              size="sm"
+              variant={isRearrangeMode ? "secondary" : "outline"}
+              onClick={() => setIsRearrangeMode((prev) => !prev)}
+              className={isRearrangeMode ? "bg-primary/20 text-primary border border-primary font-medium" : ""}
+            >
+              {isRearrangeMode ? (
+                <>
+                  <Check className="mr-1 h-4 w-4" /> Done
+                </>
+              ) : (
+                <>
+                  <GripVertical className="mr-1 h-4 w-4" /> Rearrange
+                </>
+              )}
+            </Button>
+          )}
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => {
+              setEditingWidget(null)
+              setNewWidgetHabit("")
+              setNewWidgetType("mini-heatmap")
+              setNewWidgetTimeframe("1m")
+              setNewWidgetSize("medium")
+              setShowAddModal(true)
+            }}
+          >
+            <Plus className="mr-1 h-4 w-4" /> Add Graph
+          </Button>
+        </div>
       </div>
 
       {/* ADD GRAPH MODAL (SIMPLE INLINE) */}
@@ -337,43 +402,61 @@ export default function StatisticsView() {
         </div>
       )}
 
-      {/* WIDGETS GRID */}
-      <div className="grid grid-cols-2 gap-2.5 sm:gap-3 md:gap-4">
-        {widgets.map((widget) => (
-          <WidgetRenderer
-            key={widget.id}
-            widget={widget}
-            habit={habits.find(h => h.id === widget.habitId)}
-            onEdit={() => {
-              setEditingWidget(widget)
-              setNewWidgetHabit(widget.habitId)
-              setNewWidgetType(widget.graphType)
-              setNewWidgetTimeframe(widget.timeframe)
-              setNewWidgetSize(widget.size ?? "medium")
-              setShowAddModal(true)
-            }}
-            onDelete={() => setWidgetToDelete(widget)}
-          />
-        ))}
-        {widgets.length === 0 && !showAddModal && (
-          <p className="text-sm text-muted-foreground">No custom graphs added yet.</p>
-        )}
-      </div>
+      {/* WIDGETS GRID WITH DND-KIT REORDERING */}
+      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+        <SortableContext items={widgets.map((w) => w.id)} strategy={rectSortingStrategy}>
+          <div className="grid grid-cols-2 gap-2.5 sm:gap-3 md:gap-4">
+            {widgets.map((widget) => (
+              <SortableWidgetCard
+                key={widget.id}
+                widget={widget}
+                habit={habits.find((h) => h.id === widget.habitId)}
+                isRearrangeMode={isRearrangeMode}
+                onEdit={() => {
+                  setEditingWidget(widget)
+                  setNewWidgetHabit(widget.habitId)
+                  setNewWidgetType(widget.graphType)
+                  setNewWidgetTimeframe(widget.timeframe)
+                  setNewWidgetSize(widget.size ?? "medium")
+                  setShowAddModal(true)
+                }}
+                onDelete={() => setWidgetToDelete(widget)}
+              />
+            ))}
+            {widgets.length === 0 && !showAddModal && (
+              <p className="text-sm text-muted-foreground col-span-2">No custom graphs added yet.</p>
+            )}
+          </div>
+        </SortableContext>
+      </DndContext>
     </div>
   )
 }
 
-function WidgetRenderer({
+function SortableWidgetCard({
   widget,
   habit,
+  isRearrangeMode,
   onEdit,
   onDelete,
 }: {
   widget: StatisticsWidget
   habit?: Habit
+  isRearrangeMode: boolean
   onEdit: () => void
   onDelete: () => void
 }) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: widget.id,
+    disabled: !isRearrangeMode,
+  })
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    zIndex: isDragging ? 50 : 1,
+  }
+
   const logs = useAppStore((s) => s.logs)
 
   const { dateCountMap, maxCount } = useMemo(() => {
@@ -386,7 +469,9 @@ function WidgetRenderer({
       }
     }
     let max = 0
-    for (const c of map.values()) { if (c > max) max = c }
+    for (const c of map.values()) {
+      if (c > max) max = c
+    }
     return { dateCountMap: map, maxCount: max }
   }, [logs, widget.habitId])
 
@@ -398,27 +483,52 @@ function WidgetRenderer({
   const isSmall = widget.size === "small"
 
   return (
-    <Card className={`relative overflow-hidden ${isSmall ? "col-span-1" : "col-span-2"}`}>
+    <Card
+      ref={setNodeRef}
+      style={style}
+      className={`relative overflow-hidden transition-shadow ${
+        isSmall ? "col-span-1" : "col-span-2"
+      } ${isDragging ? "shadow-lg opacity-80 ring-2 ring-primary" : ""} ${
+        isRearrangeMode ? "border-dashed border-primary/50" : ""
+      }`}
+    >
       <div className="absolute right-1.5 top-1.5 flex gap-1 z-10 sm:right-2 sm:top-2">
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={onEdit}
-          className="h-6 w-6 text-muted-foreground hover:text-foreground"
-        >
-          <Pencil className="h-3 w-3" />
-        </Button>
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={onDelete}
-          className="h-6 w-6 text-muted-foreground hover:text-destructive"
-        >
-          <Trash2 className="h-3 w-3" />
-        </Button>
+        {isRearrangeMode ? (
+          <>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-6 w-6 text-muted-foreground cursor-grab active:cursor-grabbing hover:text-foreground touch-none"
+              {...attributes}
+              {...listeners}
+              title="Drag to reorder widget"
+            >
+              <GripVertical className="h-3.5 w-3.5" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={onDelete}
+              className="h-6 w-6 text-muted-foreground hover:text-destructive"
+              title="Delete widget"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+            </Button>
+          </>
+        ) : (
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={onEdit}
+            className="h-6 w-6 text-muted-foreground hover:text-foreground"
+            title="Edit widget"
+          >
+            <Pencil className="h-3 w-3" />
+          </Button>
+        )}
       </div>
       <CardHeader className={isSmall ? "p-2.5 pb-1 sm:p-4 sm:pb-2" : "pb-2 pt-4"}>
-        <CardTitle className="text-xs sm:text-sm flex items-center justify-between pr-12 sm:pr-14">
+        <CardTitle className="text-xs sm:text-sm flex items-center justify-between pr-14 sm:pr-16">
           <span className="flex items-center gap-1.5 truncate">
             <span
               className="inline-block h-3 w-3 rounded-full shrink-0 border border-black/10 dark:border-white/10 shadow-xs"
@@ -434,13 +544,36 @@ function WidgetRenderer({
       </CardHeader>
       <CardContent className={isSmall ? "p-2.5 pt-0 sm:p-4 sm:pt-0" : ""}>
         {widget.graphType === "mini-heatmap" && (
-          <MiniHeatmapRenderer dateCountMap={dateCountMap} maxCount={maxCount} weeksCount={weeksCount} today={today} size={widget.size ?? "medium"} color={habit.color} />
+          <MiniHeatmapRenderer
+            dateCountMap={dateCountMap}
+            maxCount={maxCount}
+            weeksCount={weeksCount}
+            today={today}
+            size={widget.size ?? "medium"}
+            color={habit.color}
+          />
         )}
         {widget.graphType === "bar-chart" && (
-          <BarChartRenderer dateCountMap={dateCountMap} maxCount={maxCount} weeksCount={weeksCount} today={today} unit={habit.unit} size={widget.size ?? "medium"} color={habit.color} />
+          <BarChartRenderer
+            dateCountMap={dateCountMap}
+            maxCount={maxCount}
+            weeksCount={weeksCount}
+            today={today}
+            unit={habit.unit}
+            size={widget.size ?? "medium"}
+            color={habit.color}
+          />
         )}
         {widget.graphType === "counter" && (
-          <CounterRenderer dateCountMap={dateCountMap} maxCount={maxCount} weeksCount={weeksCount} today={today} unit={habit.unit} size={widget.size ?? "medium"} color={habit.color} />
+          <CounterRenderer
+            dateCountMap={dateCountMap}
+            maxCount={maxCount}
+            weeksCount={weeksCount}
+            today={today}
+            unit={habit.unit}
+            size={widget.size ?? "medium"}
+            color={habit.color}
+          />
         )}
       </CardContent>
     </Card>

@@ -281,6 +281,7 @@ export default function StatisticsView() {
               <select className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm" value={newWidgetType} onChange={(e) => setNewWidgetType(e.target.value as GraphType)}>
                 <option value="mini-heatmap">Mini Heatmap</option>
                 <option value="bar-chart">Bar Chart</option>
+                <option value="counter">Counter</option>
               </select>
             </div>
             <div className="grid gap-2">
@@ -438,6 +439,9 @@ function WidgetRenderer({
         {widget.graphType === "bar-chart" && (
           <BarChartRenderer dateCountMap={dateCountMap} maxCount={maxCount} weeksCount={weeksCount} today={today} unit={habit.unit} size={widget.size ?? "medium"} color={habit.color} />
         )}
+        {widget.graphType === "counter" && (
+          <CounterRenderer dateCountMap={dateCountMap} maxCount={maxCount} weeksCount={weeksCount} today={today} unit={habit.unit} size={widget.size ?? "medium"} color={habit.color} />
+        )}
       </CardContent>
     </Card>
   )
@@ -592,4 +596,41 @@ function BarChartRenderer({ dateCountMap, maxCount, weeksCount, today, unit, siz
     </div>
   )
 }
+
+function CounterRenderer({ dateCountMap, weeksCount, today, unit, size = "medium", color }: ChartProps) {
+  const total = useMemo(() => {
+    const daysCount = weeksCount * 7
+    const start = subDays(today, daysCount - 1)
+    const allDays = eachDayOfInterval({ start, end: today })
+    let sum = 0
+    for (const d of allDays) {
+      const dateStr = format(d, "yyyy-MM-dd")
+      sum += dateCountMap.get(dateStr) ?? 0
+    }
+    return sum
+  }, [dateCountMap, weeksCount, today])
+
+  const containerHeight = size === "small" ? "h-28 sm:h-32" : "h-36 sm:h-40"
+  const numberSize = size === "small" ? "text-2xl sm:text-3xl" : "text-3xl sm:text-5xl"
+  const unitSize = size === "small" ? "text-xs sm:text-sm" : "text-sm sm:text-base"
+
+  return (
+    <div className={`flex ${containerHeight} w-full flex-col items-center justify-center p-2 text-center`}>
+      <div className="flex items-baseline justify-center gap-1.5 flex-wrap">
+        <span
+          className={`${numberSize} font-bold font-mono tracking-tight`}
+          style={{ color: color || "var(--color-primary)" }}
+        >
+          {total.toLocaleString()}
+        </span>
+        {unit && (
+          <span className={`${unitSize} font-medium text-muted-foreground`}>
+            {unit}
+          </span>
+        )}
+      </div>
+    </div>
+  )
+}
+
 

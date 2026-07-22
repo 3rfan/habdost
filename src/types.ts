@@ -38,7 +38,7 @@ export interface HabitLog {
   createdAt: string
 }
 
-export type GraphType = "mini-heatmap" | "bar-chart"
+export type GraphType = "mini-heatmap" | "bar-chart" | "counter"
 export type Timeframe = "1w" | "1m" | "3m" | "1y"
 export type WidgetSize = "medium" | "small"
 

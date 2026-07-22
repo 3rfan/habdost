@@ -13,7 +13,12 @@ import {
   TouchSensor,
   useSensor,
   useSensors,
+  DragOverlay,
+  defaultDropAnimationSideEffects,
+  type DragStartEvent,
   type DragEndEvent,
+  type DraggableAttributes,
+  type DraggableSyntheticListeners,
 } from "@dnd-kit/core"
 import {
   SortableContext,
@@ -85,13 +90,19 @@ export default function StatisticsView() {
   const [mainTimeframe, setMainTimeframe] = useState<Timeframe>("1y")
   const [selectedHabitId, setSelectedHabitId] = useState<string | null>(null)
   const [isRearrangeMode, setIsRearrangeMode] = useState(false)
+  const [activeDragId, setActiveDragId] = useState<string | null>(null)
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
     useSensor(TouchSensor, { activationConstraint: { delay: 150, tolerance: 5 } })
   )
 
+  const handleDragStart = (event: DragStartEvent) => {
+    setActiveDragId(event.active.id as string)
+  }
+
   const handleDragEnd = async (event: DragEndEvent) => {
+    setActiveDragId(null)
     const { active, over } = event
     if (!over || active.id === over.id) return
     const oldIndex = widgets.findIndex((w) => w.id === active.id)
@@ -305,7 +316,7 @@ export default function StatisticsView() {
                 </>
               ) : (
                 <>
-                  <GripVertical className="mr-1 h-4 w-4" /> Rearrange
+                  <Pencil className="mr-1 h-4 w-4" /> Edit
                 </>
               )}
             </Button>
@@ -403,7 +414,13 @@ export default function StatisticsView() {
       )}
 
       {/* WIDGETS GRID WITH DND-KIT REORDERING */}
-      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+      <DndContext 
+        sensors={sensors} 
+        collisionDetection={closestCenter} 
+        onDragStart={handleDragStart}
+        onDragEnd={handleDragEnd}
+        onDragCancel={() => setActiveDragId(null)}
+      >
         <SortableContext items={widgets.map((w) => w.id)} strategy={rectSortingStrategy}>
           <div className="grid grid-cols-2 gap-2.5 sm:gap-3 md:gap-4">
             {widgets.map((widget) => (
@@ -428,6 +445,23 @@ export default function StatisticsView() {
             )}
           </div>
         </SortableContext>
+        <DragOverlay dropAnimation={{ sideEffects: defaultDropAnimationSideEffects({ styles: { active: { opacity: "0.4" } } }) }}>
+          {activeDragId ? (() => {
+            const activeWidget = widgets.find((w) => w.id === activeDragId)
+            if (!activeWidget) return null
+            const habit = habits.find((h) => h.id === activeWidget.habitId)
+            return (
+              <div className={activeWidget.size === "small" ? "w-[calc(50vw-1.5rem)] max-w-[400px]" : "w-[calc(100vw-3rem)] max-w-[800px]"}>
+                <WidgetCardUI
+                  widget={activeWidget}
+                  habit={habit}
+                  isRearrangeMode={isRearrangeMode}
+                  isOverlay
+                />
+              </div>
+            )
+          })() : null}
+        </DragOverlay>
       </DndContext>
     </div>
   )
@@ -454,9 +488,48 @@ function SortableWidgetCard({
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
-    zIndex: isDragging ? 50 : 1,
+    zIndex: isDragging ? 0 : 1,
+    opacity: isDragging ? 0.3 : 1,
   }
 
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={`${widget.size === "small" ? "col-span-1" : "col-span-2"}`}
+    >
+      <WidgetCardUI
+        widget={widget}
+        habit={habit}
+        isRearrangeMode={isRearrangeMode}
+        onEdit={onEdit}
+        onDelete={onDelete}
+        dragAttributes={attributes}
+        dragListeners={listeners}
+      />
+    </div>
+  )
+}
+
+function WidgetCardUI({
+  widget,
+  habit,
+  isRearrangeMode,
+  onEdit,
+  onDelete,
+  dragAttributes,
+  dragListeners,
+  isOverlay = false,
+}: {
+  widget: StatisticsWidget
+  habit?: Habit
+  isRearrangeMode: boolean
+  onEdit?: () => void
+  onDelete?: () => void
+  dragAttributes?: DraggableAttributes
+  dragListeners?: DraggableSyntheticListeners
+  isOverlay?: boolean
+}) {
   const logs = useAppStore((s) => s.logs)
 
   const { dateCountMap, maxCount } = useMemo(() => {
@@ -484,13 +557,9 @@ function SortableWidgetCard({
 
   return (
     <Card
-      ref={setNodeRef}
-      style={style}
-      className={`relative overflow-hidden transition-shadow ${
-        isSmall ? "col-span-1" : "col-span-2"
-      } ${isDragging ? "shadow-lg opacity-80 ring-2 ring-primary" : ""} ${
-        isRearrangeMode ? "border-dashed border-primary/50" : ""
-      }`}
+      className={`relative overflow-hidden transition-shadow h-full ${
+        isOverlay ? "shadow-2xl ring-2 ring-primary cursor-grabbing scale-105" : ""
+      } ${isRearrangeMode && !isOverlay ? "border-dashed border-primary/50" : ""}`}
     >
       <div className="absolute right-1.5 top-1.5 flex gap-1 z-10 sm:right-2 sm:top-2">
         {isRearrangeMode ? (
@@ -499,23 +568,25 @@ function SortableWidgetCard({
               variant="ghost"
               size="icon"
               className="h-6 w-6 text-muted-foreground cursor-grab active:cursor-grabbing hover:text-foreground touch-none"
-              {...attributes}
-              {...listeners}
+              {...dragAttributes}
+              {...dragListeners}
               title="Drag to reorder widget"
             >
               <GripVertical className="h-3.5 w-3.5" />
             </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={onDelete}
-              className="h-6 w-6 text-muted-foreground hover:text-destructive"
-              title="Delete widget"
-            >
-              <Trash2 className="h-3.5 w-3.5" />
-            </Button>
+            {onDelete && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={onDelete}
+                className="h-6 w-6 text-muted-foreground hover:text-destructive"
+                title="Delete widget"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+              </Button>
+            )}
           </>
-        ) : (
+        ) : onEdit && (
           <Button
             variant="ghost"
             size="icon"
@@ -756,9 +827,7 @@ function BarChartRenderer({ dateCountMap, maxCount, weeksCount, today, unit, siz
           </div>
           <div className="flex w-full flex-1 items-end justify-center">
             <div
-              className={`w-full max-w-[24px] rounded-t-sm transition-all hover:opacity-80 ${
-                b.isToday ? "ring-2 ring-primary ring-offset-1 dark:ring-offset-card" : ""
-              }`}
+              className="w-full max-w-[24px] rounded-t-sm transition-all hover:opacity-80"
               style={{
                 height: `${b.height}%`,
                 backgroundColor: color || "var(--color-primary)"

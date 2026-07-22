@@ -9,7 +9,7 @@ import { Select } from "@/components/ui/select"
 import { useAppStore } from "@/store"
 import { generateRecurringTodos } from "@/scheduler"
 import type { Habit } from "@/types"
-import { Trash2, Plus, Repeat, ChevronDown, ChevronUp, Pencil } from "lucide-react"
+import { Trash2, Plus, Repeat, ChevronDown, ChevronUp, Pencil, Palette } from "lucide-react"
 
 const DAYS = [
   { label: "Mon", value: 1 },
@@ -328,15 +328,30 @@ export default function HabitManager() {
                         title={c.label}
                       />
                     ))}
-                    <div className="relative flex items-center justify-center">
+                    <div
+                      className={`relative flex h-7 w-7 items-center justify-center rounded-full transition-transform hover:scale-105 shadow-sm ${
+                        !PRESET_COLORS.some(c => c.hex.toLowerCase() === color.toLowerCase())
+                          ? "scale-110 ring-2 ring-primary ring-offset-2 ring-offset-background"
+                          : ""
+                      }`}
+                      style={{
+                        background: "conic-gradient(red, yellow, lime, aqua, blue, magenta, red)",
+                      }}
+                      title="Custom Color Picker"
+                    >
                       <input
                         id="habit-color"
                         type="color"
                         value={color}
                         onChange={(e) => setColor(e.target.value)}
-                        className="h-7 w-7 cursor-pointer appearance-none rounded-full border-0 bg-transparent p-0 [&::-webkit-color-swatch-wrapper]:p-0 [&::-webkit-color-swatch]:rounded-full [&::-webkit-color-swatch]:border-0"
-                        title="Custom Color Picker"
+                        className="absolute inset-0 h-full w-full cursor-pointer appearance-none rounded-full border-0 bg-transparent p-0 opacity-0"
                       />
+                      <div 
+                        className="pointer-events-none flex h-5 w-5 items-center justify-center rounded-full border border-black/10 shadow-sm"
+                        style={{ backgroundColor: color }}
+                      >
+                        <Palette className="h-3 w-3 text-white mix-blend-difference" strokeWidth={2.5} />
+                      </div>
                     </div>
                   </div>
                 </div>

@@ -10,8 +10,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
     <title>HabDost</title>
     <!-- Apple iOS PWA Meta Tags -->
+    <meta name="theme-color" content="#ffffff" id="meta-theme-color" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="HabDost" />
     <!-- Flash-of-correct-theme prevention: apply dark class before React loads -->
     <script>
@@ -19,8 +20,13 @@
         try {
           var theme = localStorage.getItem('habdost-theme');
           var prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-          if (theme === 'dark' || (!theme && prefersDark)) {
+          var isDark = theme === 'dark' || (!theme && prefersDark);
+          if (isDark) {
             document.documentElement.classList.add('dark');
+          }
+          var metaTheme = document.getElementById('meta-theme-color');
+          if (metaTheme) {
+            metaTheme.setAttribute('content', isDark ? '#09090b' : '#ffffff');
           }
         } catch (e) {}
       })();

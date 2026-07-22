@@ -23,18 +23,26 @@ function App() {
     () => document.documentElement.classList.contains("dark")
   )
 
+  const updateThemeMeta = (dark: boolean) => {
+    const meta = document.getElementById("meta-theme-color")
+    if (meta) {
+      meta.setAttribute("content", dark ? "#09090b" : "#ffffff")
+    }
+  }
+
   const toggleDarkMode = () => {
     const next = !isDark
     setIsDark(next)
     document.documentElement.classList.toggle("dark", next)
     localStorage.setItem("habdost-theme", next ? "dark" : "light")
+    updateThemeMeta(next)
   }
 
-  // Enable smooth color transitions after the first paint. We defer this so the
-  // FOCT script's initial .dark class assignment doesn't trigger a visible fade.
+  // Enable smooth color transitions after the first paint and keep theme meta tag in sync.
   useEffect(() => {
     document.documentElement.classList.add("theme-ready")
-  }, [])
+    updateThemeMeta(isDark)
+  }, [isDark])
 
   useEffect(() => {
     const init = async () => {

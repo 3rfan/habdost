@@ -126,12 +126,9 @@
   *::-webkit-scrollbar {
     display: none;
   }
-  body {
-    @apply bg-background text-foreground;
-    }
-  html {
-    @apply font-sans;
-    }
+  html, body {
+    @apply bg-background text-foreground font-sans;
+  }
 }
 
 /* Smooth theme transition — applied only after React hydration to prevent

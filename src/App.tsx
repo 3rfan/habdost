@@ -95,6 +95,16 @@ function App() {
     return () => window.removeEventListener("scroll", handleScroll)
   }, [])
 
+  useEffect(() => {
+    const handleFocus = () => {
+      setIsNavVisible(true)
+      lastScrollY.current = window.scrollY
+    }
+
+    window.addEventListener("focus", handleFocus)
+    return () => window.removeEventListener("focus", handleFocus)
+  }, [])
+
   return (
     <div className="min-h-dvh bg-background text-foreground">
       <header className="fixed inset-x-0 top-0 z-10 border-b bg-background/80 backdrop-blur pt-[env(safe-area-inset-top,0px)]">

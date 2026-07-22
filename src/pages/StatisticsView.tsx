@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react"
+import { useMemo, useState, useRef, useLayoutEffect } from "react"
 import {
   format,
   subDays,
@@ -91,6 +91,17 @@ export default function StatisticsView() {
   const [selectedHabitId, setSelectedHabitId] = useState<string | null>(null)
   const [isRearrangeMode, setIsRearrangeMode] = useState(false)
   const [activeDragId, setActiveDragId] = useState<string | null>(null)
+
+  const mainHeatmapScrollRef = useRef<HTMLDivElement>(null)
+
+  useLayoutEffect(() => {
+    if (mainHeatmapScrollRef.current) {
+      const el = mainHeatmapScrollRef.current
+      requestAnimationFrame(() => {
+        el.scrollTo({ left: el.scrollWidth, behavior: "smooth" })
+      })
+    }
+  }, [mainTimeframe, selectedHabitId, logs])
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
@@ -242,7 +253,7 @@ export default function StatisticsView() {
             </div>
           ) : (
             <div className="space-y-4">
-              <div className="overflow-x-auto">
+              <div ref={mainHeatmapScrollRef} className="overflow-x-auto overflow-y-hidden touch-pan-x select-none">
                 <div className="inline-block min-w-full">
                   <div className="mb-1 flex">
                     <div className="w-8 shrink-0" />
@@ -561,46 +572,9 @@ function WidgetCardUI({
         isOverlay ? "shadow-2xl ring-2 ring-primary cursor-grabbing scale-105" : ""
       } ${isRearrangeMode && !isOverlay ? "border-dashed border-primary/50" : ""}`}
     >
-      <div className="absolute right-1.5 top-1.5 flex gap-1 z-10 sm:right-2 sm:top-2">
-        {isRearrangeMode ? (
-          <>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-6 w-6 text-muted-foreground cursor-grab active:cursor-grabbing hover:text-foreground touch-none"
-              {...dragAttributes}
-              {...dragListeners}
-              title="Drag to reorder widget"
-            >
-              <GripVertical className="h-3.5 w-3.5" />
-            </Button>
-            {onDelete && (
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={onDelete}
-                className="h-6 w-6 text-muted-foreground hover:text-destructive"
-                title="Delete widget"
-              >
-                <Trash2 className="h-3.5 w-3.5" />
-              </Button>
-            )}
-          </>
-        ) : onEdit && (
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={onEdit}
-            className="h-6 w-6 text-muted-foreground hover:text-foreground"
-            title="Edit widget"
-          >
-            <Pencil className="h-3 w-3" />
-          </Button>
-        )}
-      </div>
       <CardHeader className={isSmall ? "p-2.5 pb-1 sm:p-4 sm:pb-2" : "pb-2 pt-4"}>
-        <CardTitle className="text-xs sm:text-sm flex items-center justify-between pr-14 sm:pr-16">
-          <span className="flex items-center gap-1.5 truncate">
+        <CardTitle className="text-xs sm:text-sm flex items-center justify-between gap-2">
+          <span className="flex items-center gap-1.5 truncate min-w-0">
             <span
               className="inline-block h-3 w-3 rounded-full shrink-0 border border-black/10 dark:border-white/10 shadow-xs"
               style={{ backgroundColor: habit.color || "#10b981" }}
@@ -608,6 +582,43 @@ function WidgetCardUI({
             {habit.emoji && <span className="mr-0.5">{habit.emoji}</span>}
             #{habit.tag}
           </span>
+          <div className="flex items-center gap-1 shrink-0">
+            {isRearrangeMode ? (
+              <>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-6 w-6 text-muted-foreground cursor-grab active:cursor-grabbing hover:text-foreground touch-none"
+                  {...dragAttributes}
+                  {...dragListeners}
+                  title="Drag to reorder widget"
+                >
+                  <GripVertical className="h-3.5 w-3.5" />
+                </Button>
+                {onDelete && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={onDelete}
+                    className="h-6 w-6 text-muted-foreground hover:text-destructive"
+                    title="Delete widget"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </Button>
+                )}
+              </>
+            ) : onEdit && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={onEdit}
+                className="h-6 w-6 text-muted-foreground hover:text-foreground"
+                title="Edit widget"
+              >
+                <Pencil className="h-3.5 w-3.5" />
+              </Button>
+            )}
+          </div>
         </CardTitle>
         <p className="text-[10px] sm:text-xs text-muted-foreground capitalize truncate">
           {widget.graphType.replace("-", " ")} • {TIMEFRAMES.find((t) => t.value === widget.timeframe)?.label}

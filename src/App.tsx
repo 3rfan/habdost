@@ -9,6 +9,7 @@ import StatisticsView from "@/pages/StatisticsView"
 import SettingsView from "@/pages/SettingsView"
 import { useAppStore } from "@/store"
 import { generateRecurringTodos } from "@/scheduler"
+import { HabDostLogo } from "@/components/HabDostLogo"
 
 function App() {
   const loadAll = useAppStore((s) => s.loadAll)
@@ -109,7 +110,10 @@ function App() {
     <div className="min-h-dvh bg-background text-foreground">
       <header className="fixed inset-x-0 top-0 z-10 border-b bg-background/80 backdrop-blur pt-[env(safe-area-inset-top,0px)]">
         <div className="mx-auto flex h-14 max-w-screen-sm items-center justify-between px-4">
-          <h1 className="text-lg font-semibold">HabDost</h1>
+          <div className="flex items-center gap-2.5">
+            <HabDostLogo size={26} className="rounded-lg shadow-xs" />
+            <h1 className="text-lg font-semibold tracking-tight">HabDost</h1>
+          </div>
           <button
             onClick={toggleDarkMode}
             aria-label="Toggle dark mode"

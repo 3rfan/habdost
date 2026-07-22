@@ -12,7 +12,7 @@ export default defineConfig({
     VitePWA({
       registerType: "autoUpdate",
       injectRegister: "auto",
-      includeAssets: ["favicon.svg"],
+      includeAssets: ["favicon.ico", "favicon-32x32.png", "apple-touch-icon.png", "habdost_png.png"],
       manifest: {
         name: "HabDost",
         short_name: "HabDost",

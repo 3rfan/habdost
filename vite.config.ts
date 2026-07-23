@@ -18,7 +18,8 @@ export default defineConfig({
         "favicon-16x16.png",
         "favicon-32x32.png",
         "apple-touch-icon.png",
-        "habdost_png.png",
+        "habdost_png_black.png",
+        "habdost_png_white.png",
       ],
       manifest: {
         name: "HabDost",

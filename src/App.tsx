@@ -62,21 +62,13 @@ function App() {
   }, [loadAll, addTodo])
 
   const [isNavVisible, setIsNavVisible] = useState(true)
-  // Ref to the nav element so we can defer the transition style to after first
-  // paint. This prevents the nav from animating in on initial load while still
-  // enabling the slide-in/out animation on subsequent scroll interactions.
-  const navRef = useRef<HTMLElement>(null)
+  const [hasNavMounted, setHasNavMounted] = useState(false)
   const lastScrollY = useRef(0)
 
+  // Defer CSS transitions until after initial paint to prevent transition artifacts on mount
   useEffect(() => {
-    // Use requestAnimationFrame so the nav's initial translate-y-0 is painted
-    // before we apply the transition, preventing an unwanted slide-in on load.
     const raf = requestAnimationFrame(() => {
-      if (navRef.current) {
-        navRef.current.style.transitionProperty = "transform"
-        navRef.current.style.transitionDuration = "300ms"
-        navRef.current.style.transitionTimingFunction = "ease-in-out"
-      }
+      setHasNavMounted(true)
     })
     return () => cancelAnimationFrame(raf)
   }, [])
@@ -119,7 +111,7 @@ function App() {
       <header className="fixed inset-x-0 top-0 z-10 border-b bg-background/80 backdrop-blur pt-[env(safe-area-inset-top,0px)]">
         <div className="mx-auto flex h-14 max-w-screen-sm items-center justify-between px-4">
           <div className="flex items-center gap-2.5">
-            <HabDostLogo size={26} className="rounded-lg shadow-xs" />
+            <HabDostLogo size={26} isDark={isDark} className="rounded-lg shadow-xs" />
             <h1 className="text-lg font-semibold tracking-tight">HabDost</h1>
           </div>
           <button
@@ -147,10 +139,9 @@ function App() {
       </main>
 
       <nav
-        ref={navRef}
-        className={`fixed inset-x-0 bottom-0 z-10 border-t bg-background/90 backdrop-blur pb-[env(safe-area-inset-bottom,0px)] transition-transform duration-300 ease-in-out ${
-          isNavVisible ? "translate-y-0" : "translate-y-full"
-        }`}
+        className={`fixed inset-x-0 bottom-0 z-10 border-t bg-background/90 backdrop-blur pb-[env(safe-area-inset-bottom,0px)] ${
+          hasNavMounted ? "transition-transform duration-300 ease-in-out" : ""
+        } ${isNavVisible ? "translate-y-0" : "translate-y-full"}`}
       >
         <div className="mx-auto grid h-14 max-w-screen-sm grid-cols-5 px-2">
           <NavLink
